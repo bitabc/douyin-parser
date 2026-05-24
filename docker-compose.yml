@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  douyin-parser:
+    build: .
+    container_name: douyin-parser
+    ports:
+      - "8899:8899"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8899/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 2
+      start_period: 5s
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - douyin_cache:/tmp/douyin_cache
+
+volumes:
+  douyin_cache:

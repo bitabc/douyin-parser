@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>抖音解析工具</title>
+<style>
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a24;
+    --surface-hover: #22222f;
+    --border: #2a2a3a;
+    --text: #e8e8f0;
+    --text-muted: #8888a0;
+    --accent: #fe2c55;
+    --accent-hover: #ff4d7a;
+    --accent-gradient: linear-gradient(135deg, #fe2c55, #ff6b35);
+    --success: #10b981;
+    --error: #ef4444;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── Header ── */
+  .header {
+    width: 100%;
+    padding: 32px 20px 24px;
+    text-align: center;
+    background: linear-gradient(180deg, #1a0a12 0%, var(--bg) 100%);
+    border-bottom: 1px solid var(--border);
+  }
+  .header-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .header-logo svg { width: 32px; height: 32px; }
+  .header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header p {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-top: 4px;
+  }
+
+  /* ── Main Container ── */
+  .container {
+    width: 100%;
+    max-width: 720px;
+    padding: 24px 16px;
+  }
+
+  /* ── Input Area ── */
+  .input-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    margin-bottom: 24px;
+  }
+  .input-card label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 8px;
+  }
+  .input-row {
+    display: flex;
+    gap: 10px;
+  }
+  .input-row input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    color: var(--text);
+    font-size: 15px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .input-row input:focus {
+    border-color: var(--accent);
+  }
+  .input-row input::placeholder {
+    color: var(--text-muted);
+    opacity: .5;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 24px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--accent-gradient);
+    color: #fff;
+  }
+  .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+  .btn-secondary {
+    background: var(--surface-hover);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--text-muted); }
+
+  /* ── Examples ── */
+  .examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .examples span {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-right: 4px;
+    line-height: 28px;
+  }
+  .example-tag {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: var(--surface-hover);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .example-tag:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  /* ── Loading ── */
+  .loading {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 0;
+    gap: 16px;
+  }
+  .loading.active { display: flex; }
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading p {
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  .loading .steps {
+    display: flex;
+    gap: 24px;
+    margin-top: 8px;
+  }
+  .loading .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-muted);
+    font-size: 12px;
+    opacity: .5;
+    transition: all .3s;
+  }
+  .loading .step.active { opacity: 1; color: var(--accent); }
+  .loading .step.done { opacity: 1; color: var(--success); }
+  .step-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: all .3s;
+  }
+  .step.active .step-dot {
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 1s ease-in-out infinite;
+  }
+  .step.done .step-dot { background: var(--success); }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+  }
+
+  /* ── Result Card ── */
+  .result {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .result.active { display: block; }
+
+  .result-error {
+    display: none;
+    background: var(--surface);
+    border: 1px solid rgba(239,68,68,.3);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .result-error.active { display: block; }
+  .result-error .icon { font-size: 28px; margin-bottom: 8px; }
+  .result-error h3 { color: var(--error); font-size: 16px; margin-bottom: 4px; }
+  .result-error p { color: var(--text-muted); font-size: 14px; }
+  .result-error .elapsed { color: var(--text-muted); font-size: 12px; margin-top: 12px; }
+
+  /* Author Bar */
+  .author-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .author-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border);
+  }
+  .author-info { flex: 1; }
+  .author-name {
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .author-meta {
+    display: flex;
+    gap: 12px;
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-top: 2px;
+  }
+  .platform-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* Content Body */
+  .content-body {
+    padding: 20px;
+  }
+  .content-title {
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.5;
+    margin-bottom: 16px;
+    word-break: break-word;
+  }
+  .content-title::before {
+    content: '"';
+    color: var(--accent);
+  }
+  .content-title::after {
+    content: '"';
+    color: var(--accent);
+  }
+
+  /* Video Player */
+  .video-container {
+    position: relative;
+    width: 100%;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: #000;
+    margin-bottom: 16px;
+  }
+  .video-container video {
+    width: 100%;
+    display: block;
+    max-height: 500px;
+    background: #000;
+  }
+  .video-info {
+    display: flex;
+    gap: 16px;
+    padding: 8px 0 16px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  .video-info span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* Image Gallery */
+  .gallery {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .gallery-1 { grid-template-columns: 1fr; }
+  .gallery-2 { grid-template-columns: 1fr 1fr; }
+  .gallery-3, .gallery-4 { grid-template-columns: 1fr 1fr; }
+  .gallery-many { grid-template-columns: repeat(3, 1fr); }
+  .gallery img {
+    width: 100%;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: transform .2s;
+    display: block;
+  }
+  .gallery img:hover { transform: scale(1.02); }
+
+  /* Image Viewer (lightbox) */
+  .viewer {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.92);
+    z-index: 999;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+  }
+  .viewer.active { display: flex; }
+  .viewer img {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+  .viewer-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 28px;
+    cursor: pointer;
+    opacity: .6;
+    transition: opacity .2s;
+  }
+  .viewer-close:hover { opacity: 1; }
+
+  /* Footer */
+  .footer {
+    color: var(--text-muted);
+    font-size: 12px;
+    padding: 32px 16px;
+    text-align: center;
+    opacity: .5;
+  }
+
+  /* Status Badge */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .status-success {
+    background: rgba(16,185,129,.15);
+    color: var(--success);
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .container { padding: 16px 12px; }
+    .input-row { flex-direction: column; }
+    .btn { justify-content: center; }
+    .gallery-many { grid-template-columns: repeat(2, 1fr); }
+    .author-bar { padding: 12px 14px; }
+    .content-body { padding: 14px; }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M12 2C10.9 2 10 2.9 10 4V14C10 15.1 10.9 16 12 16C13.1 16 14 15.1 14 14V4C14 2.9 13.1 2 12 2Z" fill="#fe2c55"/>
+      <path d="M18 7V14C18 17.3 15.3 20 12 20C8.7 20 6 17.3 6 14V7H4V14C4 18.4 7.6 22 12 22C16.4 22 20 18.4 20 14V7H18Z" fill="#ff6b35"/>
+    </svg>
+    <h1>抖音解析工具</h1>
+  </div>
+  <p>粘贴抖音分享链接，一键解析无水印视频 / 图集 / 图文</p>
+</div>
+
+<div class="container">
+  <!-- Input -->
+  <div class="input-card">
+    <label for="url-input">抖音分享链接</label>
+    <div class="input-row">
+      <input
+        id="url-input"
+        type="url"
+        placeholder="https://v.douyin.com/xxxxx/"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button class="btn btn-primary" id="parse-btn" onclick="parse()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        解析
+      </button>
+    </div>
+    <div class="examples">
+      <span>试试：</span>
+      <span class="example-tag" onclick="fillUrl('https://v.douyin.com/_2ljF4AmKL8/')">短链接</span>
+      <span class="example-tag" onclick="fillUrl('https://www.douyin.com/video/7521023890996514083')">标准视频</span>
+      <span class="example-tag" onclick="fillUrl('https://www.douyin.com/note/7469411074119322899')">图文</span>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p>正在解析</p>
+    <div class="steps">
+      <div class="step active" id="step1">
+        <div class="step-dot"></div>
+        <span>请求链接</span>
+      </div>
+      <div class="step" id="step2">
+        <div class="step-dot"></div>
+        <span>提取数据</span>
+      </div>
+      <div class="step" id="step3">
+        <div class="step-dot"></div>
+        <span>生成结果</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="result-error" id="error-box">
+    <div class="icon">😵</div>
+    <h3 id="error-title">解析失败</h3>
+    <p id="error-detail">请检查链接是否正确</p>
+    <div class="elapsed" id="error-elapsed"></div>
+  </div>
+
+  <!-- Result -->
+  <div class="result" id="result">
+    <!-- Author Bar -->
+    <div class="author-bar">
+      <img class="author-avatar" id="author-avatar" src="" alt="avatar" />
+      <div class="author-info">
+        <div class="author-name" id="author-name">—</div>
+        <div class="author-meta">
+          <span class="platform-badge" id="platform-badge">抖音</span>
+          <span id="content-type">视频</span>
+          <span id="publish-time">—</span>
+          <span id="parse-elapsed"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content-body">
+      <div class="content-title" id="content-title"></div>
+
+      <!-- Video -->
+      <div id="video-section" style="display:none">
+        <div class="video-container">
+          <video id="video-player" controls playsinline preload="metadata" crossorigin="anonymous"></video>
+        </div>
+        <div class="video-info">
+          <span>📹 无水印</span>
+          <span id="video-duration">⏱ —</span>
+        </div>
+        <!-- Download row -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <a class="btn btn-primary" id="download-btn" target="_blank" rel="noopener" style="text-decoration:none;font-size:13px;padding:8px 16px">
+            ⬇️ 下载视频
+          </a>
+          <a class="btn btn-secondary" id="copy-link-btn" target="_blank" rel="noopener" style="text-decoration:none;font-size:13px;padding:8px 16px">
+            🔗 复制直链
+          </a>
+        </div>
+      </div>
+
+      <!-- Images -->
+      <div class="gallery" id="image-gallery" style="display:none"></div>
+
+      <!-- Source -->
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--text-muted);word-break:break-all" id="source-url"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="viewer" id="viewer" onclick="closeViewer()">
+  <button class="viewer-close">&times;</button>
+  <img id="viewer-img" src="" alt="preview" />
+</div>
+
+<div class="footer">
+  Powered by Hermes Agent · 抖音内容解析
+</div>
+
+<script>
+// ── 媒体代理工具 ──
+function proxyUrl(url) {
+  if (!url) return '';
+  return '/api/proxy/media?url=' + encodeURIComponent(url);
+}
+
+// ── 工具 ──
+function fillUrl(url) {
+  document.getElementById('url-input').value = url;
+  parse();
+}
+
+// 格式化时间戳
+function fmtTime(ts) {
+  const d = new Date(ts * 1000);
+  const now = new Date();
+  const diff = (now - d) / 1000;
+  if (diff < 60) return '刚刚';
+  if (diff < 3600) return Math.floor(diff/60) + '分钟前';
+  if (diff < 86400) return Math.floor(diff/3600) + '小时前';
+  if (diff < 2592000) return Math.floor(diff/86400) + '天前';
+  return d.toLocaleDateString('zh-CN');
+}
+
+function fmtDuration(sec) {
+  if (!sec) return '—';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return m + ':' + s.toString().padStart(2, '0');
+}
+
+// ── 步骤动画 ──
+function setStep(n, status) {
+  for (let i = 1; i <= 3; i++) {
+    const el = document.getElementById('step' + i);
+    el.classList.remove('active', 'done');
+    if (i < n) el.classList.add('done');
+    else if (i === n) el.classList.add(status || 'active');
+  }
+}
+
+// ── 图片查看器 ──
+function openViewer(src) {
+  document.getElementById('viewer-img').src = src;
+  document.getElementById('viewer').classList.add('active');
+}
+function closeViewer() {
+  document.getElementById('viewer').classList.remove('active');
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeViewer();
+});
+
+// ── 主解析函数 ──
+async function parse() {
+  const url = document.getElementById('url-input').value.trim();
+  if (!url) {
+    document.getElementById('url-input').focus();
+    return;
+  }
+
+  // UI 重置
+  document.getElementById('result').classList.remove('active');
+  document.getElementById('error-box').classList.remove('active');
+  const loading = document.getElementById('loading');
+  loading.classList.add('active');
+  document.getElementById('parse-btn').disabled = true;
+  setStep(1, 'active');
+
+  try {
+    // 1) 请求
+    setStep(1, 'active');
+    const resp = await fetch('/api/parse?url=' + encodeURIComponent(url));
+    setStep(2, 'active');
+
+    // 2) 解析
+    setStep(2, 'done');
+    setStep(3, 'active');
+
+    const data = await resp.json();
+
+    setStep(3, 'done');
+
+    // 延迟一下让动画走完
+    await new Promise(r => setTimeout(r, 400));
+
+    loading.classList.remove('active');
+    document.getElementById('parse-btn').disabled = false;
+
+    if (!data.success) {
+      showError(data.error || '解析失败', data.elapsed);
+      return;
+    }
+
+    renderResult(data.data, data.elapsed);
+
+  } catch (err) {
+    loading.classList.remove('active');
+    document.getElementById('parse-btn').disabled = false;
+    showError('网络请求失败: ' + err.message);
+  }
+}
+
+function showError(msg, elapsed) {
+  document.getElementById('error-title').textContent = '解析失败';
+  document.getElementById('error-detail').textContent = msg || '请检查链接是否正确';
+  document.getElementById('error-elapsed').textContent = elapsed ? `耗时 ${elapsed}s` : '';
+  document.getElementById('error-box').classList.add('active');
+}
+
+function renderResult(d, elapsed) {
+  // 作者
+  document.getElementById('author-name').textContent = d.author?.name || '未知';
+  // 作者头像
+  const avatarEl = document.getElementById('author-avatar');
+  if (d.author?.avatar_url) {
+    avatarEl.src = proxyUrl(d.author.avatar_url);
+    avatarEl.onerror = () => { avatarEl.style.display = 'none'; };
+    avatarEl.style.display = '';
+  } else {
+    avatarEl.style.display = 'none';
+  }
+
+  document.getElementById('platform-badge').textContent = d.platform || '抖音';
+  document.getElementById('content-type').textContent = d.type || '视频';
+
+  // 时间
+  const timeEl = document.getElementById('publish-time');
+  if (d.create_time) {
+    timeEl.textContent = fmtTime(d.create_time);
+  } else {
+    timeEl.textContent = '';
+  }
+
+  document.getElementById('parse-elapsed').textContent = elapsed ? `⚡ ${elapsed}s` : '';
+
+  // 标题
+  document.getElementById('content-title').textContent = d.title || '(无标题)';
+
+// 视频
+  const videoSection = document.getElementById('video-section');
+  const videoPlayer = document.getElementById('video-player');
+  if (d.video?.url) {
+    videoSection.style.display = 'block';
+    videoPlayer.src = proxyUrl(d.video.url);
+    videoPlayer.poster = proxyUrl(d.video.cover_url) || '';
+    document.getElementById('video-duration').textContent = '⏱ ' + fmtDuration(d.video.duration);
+
+    // 下载按钮
+    const dlBtn = document.getElementById('download-btn');
+    dlBtn.href = proxyUrl(d.video.url) + '&download=1';
+
+    // 复制直链按钮
+    const copyBtn = document.getElementById('copy-link-btn');
+    copyBtn.onclick = (e) => {
+      e.preventDefault();
+      navigator.clipboard.writeText(d.video.url).then(() => {
+        copyBtn.textContent = '✅ 已复制';
+        setTimeout(() => { copyBtn.textContent = '🔗 复制直链'; }, 2000);
+      });
+    };
+  } else {
+    videoSection.style.display = 'none';
+    videoPlayer.src = '';
+  }
+
+  // 图片 gallery
+  const gallery = document.getElementById('image-gallery');
+  gallery.innerHTML = '';
+  if (d.contents && d.contents.length > 0) {
+    const imgs = d.contents.filter(c => c.type === 'image');
+    const total = imgs.length;
+
+    if (total > 0) {
+      gallery.style.display = 'grid';
+      if (total === 1) gallery.className = 'gallery gallery-1';
+      else if (total === 2) gallery.className = 'gallery gallery-2';
+      else if (total <= 4) gallery.className = 'gallery gallery-3';
+      else gallery.className = 'gallery gallery-many';
+
+      imgs.forEach(img => {
+        const el = document.createElement('img');
+        el.src = proxyUrl(img.url);
+        el.loading = 'lazy';
+        el.onclick = () => openViewer(proxyUrl(img.url));
+        gallery.appendChild(el);
+      });
+    } else {
+      gallery.style.display = 'none';
+    }
+  } else {
+    gallery.style.display = 'none';
+  }
+
+  // 来源
+  const sourceEl = document.getElementById('source-url');
+  sourceEl.textContent = d.source_url ? '来源：' + d.source_url : '';
+
+  // 显示结果
+  document.getElementById('result').classList.add('active');
+
+  // 滚动到结果
+  document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── 回车触发 ──
+document.getElementById('url-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') parse();
+});
+</script>
+</body>
+</html>
