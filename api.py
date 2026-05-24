@@ -48,7 +48,7 @@ app = FastAPI(
     version="2.0.0",
     contact={
         "name": "抖音解析工具",
-        "url": "https://github.com/your/douyin-parser",
+        "url": "https://github.com/bitabc/douyin-parser",
     },
     docs_url="/docs",
     redoc_url="/redoc",
@@ -72,13 +72,13 @@ class ParseRequest(BaseModel):
     url: str = Field(
         ...,
         description="抖音分享链接或整段分享文本",
-        example="1.79 :3pm OKj:/ J@v.fb 03/07 ... https://v.douyin.com/mXosMBsOHF0/ 复制此链接",
+        json_schema_extra={"example": "https://v.douyin.com/mXosMBsOHF0/"},
     )
 
 
 class AuthorInfo(BaseModel):
     """作者信息"""
-    name: str = Field(..., description="作者昵称", example="月野喵🌙")
+    name: str = Field(..., description="作者昵称", json_schema_extra={"example": "月野喵🌙"})
     avatar_url: str | None = Field(None, description="作者头像 URL")
 
 
@@ -86,19 +86,19 @@ class VideoInfo(BaseModel):
     """视频信息"""
     url: str = Field(..., description="无水印视频直链")
     cover_url: str | None = Field(None, description="视频封面 URL")
-    duration: int | None = Field(None, description="视频时长（秒）", example=9)
+    duration: int | None = Field(None, description="视频时长（秒）")
 
 
 class MediaItem(BaseModel):
     """媒体内容项"""
-    type: str = Field(..., description="媒体类型: video / image", example="video")
+    type: str = Field(..., description="媒体类型: video / image", json_schema_extra={"example": "video"})
     url: str = Field(..., description="媒体文件 URL")
 
 
 class ParseData(BaseModel):
     """解析结果数据"""
-    platform: str = Field(..., description="平台", example="抖音")
-    type: str = Field(..., description="内容类型: 视频 / 图文 / 图集", example="视频")
+    platform: str = Field(..., description="平台", json_schema_extra={"example": "抖音"})
+    type: str = Field(..., description="内容类型: 视频 / 图文 / 图集", json_schema_extra={"example": "视频"})
     id: str = Field("", description="视频/图文 ID")
     title: str = Field(..., description="作品标题/文案")
     author: AuthorInfo = Field(..., description="作者信息")
@@ -110,10 +110,10 @@ class ParseData(BaseModel):
 
 class ParseResponse(BaseModel):
     """解析响应（通用包装）"""
-    success: bool = Field(..., description="是否成功", example=True)
+    success: bool = Field(..., description="是否成功", json_schema_extra={"example": True})
     data: ParseData | None = Field(None, description="解析结果数据")
     error: str | None = Field(None, description="错误信息（失败时）")
-    elapsed: float | None = Field(None, description="耗时（秒）", example=1.357)
+    elapsed: float | None = Field(None, description="耗时（秒）")
 
 
 # ── 媒体代理 ─────────────────────────────────────────
@@ -132,9 +132,8 @@ def get_media_headers():
     }
 
 
-@app.api_route(
+@app.get(
     "/api/proxy/media",
-    methods=["GET", "OPTIONS"],
     tags=["媒体代理"],
     summary="代理媒体文件",
     description="""
@@ -282,7 +281,6 @@ async def api_parse_get(
     url: str = Query(
         ...,
         description="抖音分享链接或整段分享文本",
-        example="https://v.douyin.com/mXosMBsOHF0/",
     ),
 ):
     return await _do_parse(url)
