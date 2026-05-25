@@ -2,427 +2,877 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>抖音解析工具</title>
 <style>
-  :root {
-    --bg: #0f0f13;
-    --surface: #1a1a24;
-    --surface-hover: #22222f;
-    --border: #2a2a3a;
-    --text: #e8e8f0;
-    --text-muted: #8888a0;
-    --accent: #fe2c55;
-    --accent-hover: #ff4d7a;
-    --accent-gradient: linear-gradient(135deg, #fe2c55, #ff6b35);
-    --success: #10b981;
-    --error: #ef4444;
-    --radius: 12px;
-    --radius-sm: 8px;
-    --shadow: 0 8px 32px rgba(0,0,0,0.4);
-  }
+/* ── Reset & Variables ── */
+:root {
+  --bg: #0c0c12;
+  --surface: #16161f;
+  --surface-2: #1e1e2a;
+  --surface-3: #262636;
+  --border: #2a2a3c;
+  --border-light: #33334a;
+  --text: #eaeaf2;
+  --text-2: #b0b0c4;
+  --text-3: #6e6e88;
+  --accent: #fe2c55;
+  --accent-2: #ff6b35;
+  --accent-gradient: linear-gradient(135deg, #fe2c55, #ff6b35);
+  --success: #10b981;
+  --error: #ef4444;
+  --warning: #f59e0b;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-xs: 6px;
+  --shadow: 0 8px 40px rgba(0,0,0,.5);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,.3);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --transition: cubic-bezier(.22,.68,0,1);
+}
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin:0; padding:0; box-sizing:border-box; }
 
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  -webkit-font-smoothing: antialiased;
+}
 
-  /* ── Header ── */
-  .header {
-    width: 100%;
-    padding: 32px 20px 24px;
-    text-align: center;
-    background: linear-gradient(180deg, #1a0a12 0%, var(--bg) 100%);
-    border-bottom: 1px solid var(--border);
-  }
-  .header-logo {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-  }
-  .header-logo svg { width: 32px; height: 32px; }
-  .header h1 {
-    font-size: 22px;
-    font-weight: 700;
-    background: var(--accent-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .header p {
-    color: var(--text-muted);
-    font-size: 14px;
-    margin-top: 4px;
-  }
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--surface-3); }
 
-  /* ── Main Container ── */
-  .container {
-    width: 100%;
-    max-width: 720px;
-    padding: 24px 16px;
-  }
+/* ── Selection ── */
+::selection { background: rgba(254,44,85,.3); color: #fff; }
 
-  /* ── Input Area ── */
-  .input-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    box-shadow: var(--shadow);
-    margin-bottom: 24px;
-  }
-  .input-card label {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-muted);
-    display: block;
-    margin-bottom: 8px;
-  }
-  .input-row {
-    display: flex;
-    gap: 10px;
-  }
-  .input-row input {
-    flex: 1;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 12px 16px;
-    color: var(--text);
-    font-size: 15px;
-    outline: none;
-    transition: border-color .2s;
-  }
-  .input-row input:focus {
-    border-color: var(--accent);
-  }
-  .input-row input::placeholder {
-    color: var(--text-muted);
-    opacity: .5;
-  }
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 12px 24px;
-    border: none;
-    border-radius: var(--radius-sm);
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all .2s;
-    white-space: nowrap;
-  }
-  .btn-primary {
-    background: var(--accent-gradient);
-    color: #fff;
-  }
-  .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
-  .btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; }
-  .btn-secondary {
-    background: var(--surface-hover);
-    color: var(--text);
-    border: 1px solid var(--border);
-  }
-  .btn-secondary:hover { border-color: var(--text-muted); }
+/* ── Toast ── */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  background: var(--surface-2);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 12px 18px;
+  font-size: 14px;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  animation: toastIn .35s var(--transition) forwards;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  max-width: 360px;
+}
+.toast.out { animation: toastOut .3s var(--transition) forwards; }
+.toast-success { border-color: rgba(16,185,129,.4); }
+.toast-success .toast-icon { color: var(--success); }
+.toast-error { border-color: rgba(239,68,68,.4); }
+.toast-error .toast-icon { color: var(--error); }
+.toast-icon { font-size: 18px; flex-shrink: 0; }
+@keyframes toastIn {
+  from { opacity:0; transform:translateX(60px) scale(.9); }
+  to { opacity:1; transform:translateX(0) scale(1); }
+}
+@keyframes toastOut {
+  from { opacity:1; transform:translateX(0) scale(1); }
+  to { opacity:0; transform:translateX(60px) scale(.9); }
+}
 
-  /* ── Examples ── */
-  .examples {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 12px;
-  }
-  .examples span {
-    font-size: 13px;
-    color: var(--text-muted);
-    margin-right: 4px;
-    line-height: 28px;
-  }
-  .example-tag {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 20px;
-    background: var(--surface-hover);
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-    font-size: 12px;
-    cursor: pointer;
-    transition: all .2s;
-  }
-  .example-tag:hover {
-    border-color: var(--accent);
-    color: var(--text);
-  }
+/* ── Header ── */
+.header {
+  width: 100%;
+  padding: 40px 20px 28px;
+  text-align: center;
+  background: linear-gradient(180deg, #1a0a12 0%, var(--bg) 100%);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.header::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(254,44,85,.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.header-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  position: relative;
+}
+.header-logo svg { width: 34px; height: 34px; }
+.header h1 {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -.5px;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.header p {
+  color: var(--text-3);
+  font-size: 14px;
+  max-width: 400px;
+  margin: 4px auto 0;
+  line-height: 1.5;
+}
 
-  /* ── Loading ── */
-  .loading {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    padding: 40px 0;
-    gap: 16px;
-  }
-  .loading.active { display: flex; }
-  .spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin .8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading p {
-    color: var(--text-muted);
-    font-size: 14px;
-  }
-  .loading .steps {
-    display: flex;
-    gap: 24px;
-    margin-top: 8px;
-  }
-  .loading .step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    color: var(--text-muted);
-    font-size: 12px;
-    opacity: .5;
-    transition: all .3s;
-  }
-  .loading .step.active { opacity: 1; color: var(--accent); }
-  .loading .step.done { opacity: 1; color: var(--success); }
-  .step-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--border);
-    transition: all .3s;
-  }
-  .step.active .step-dot {
-    background: var(--accent);
-    box-shadow: 0 0 8px var(--accent);
-    animation: pulse 1s ease-in-out infinite;
-  }
-  .step.done .step-dot { background: var(--success); }
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.3); }
-  }
+/* ── Container ── */
+.container {
+  width: 100%;
+  max-width: 740px;
+  padding: 24px 16px;
+  flex: 1;
+}
 
-  /* ── Result Card ── */
-  .result {
-    display: none;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    box-shadow: var(--shadow);
-  }
-  .result.active { display: block; }
+/* ── Input Card ── */
+.input-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+  transition: border-color .3s;
+}
+.input-card:focus-within {
+  border-color: rgba(254,44,85,.4);
+  box-shadow: 0 8px 40px rgba(0,0,0,.5), 0 0 0 1px rgba(254,44,85,.1);
+}
+.input-card label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.input-row {
+  display: flex;
+  gap: 10px;
+}
+.input-row input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+  transition: border-color .25s, box-shadow .25s;
+  font-family: var(--font);
+}
+.input-row input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(254,44,85,.12);
+}
+.input-row input::placeholder {
+  color: var(--text-3);
+  opacity: .4;
+}
+.input-row .btn {
+  padding: 14px 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .25s var(--transition);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font);
+}
+.btn-primary {
+  background: var(--accent-gradient);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(254,44,85,.3);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(254,44,85,.4); }
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled { opacity: .25; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+.btn-secondary {
+  background: var(--surface-2);
+  color: var(--text-2);
+  border: 1px solid var(--border-light);
+}
+.btn-secondary:hover { border-color: var(--text-3); color: var(--text); }
 
-  .result-error {
-    display: none;
-    background: var(--surface);
-    border: 1px solid rgba(239,68,68,.3);
-    border-radius: var(--radius);
-    padding: 20px;
-    box-shadow: var(--shadow);
-  }
-  .result-error.active { display: block; }
-  .result-error .icon { font-size: 28px; margin-bottom: 8px; }
-  .result-error h3 { color: var(--error); font-size: 16px; margin-bottom: 4px; }
-  .result-error p { color: var(--text-muted); font-size: 14px; }
-  .result-error .elapsed { color: var(--text-muted); font-size: 12px; margin-top: 12px; }
+/* ── Paste Hint ── */
+.paste-hint {
+  display: none;
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: rgba(254,44,85,.08);
+  border: 1px solid rgba(254,44,85,.2);
+  border-radius: var(--radius-xs);
+  font-size: 13px;
+  color: var(--accent);
+  animation: fadeIn .3s ease;
+}
+.paste-hint.active { display: flex; align-items: center; gap: 8px; }
 
-  /* Author Bar */
-  .author-bar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-  }
-  .author-avatar {
-    width: 40px; height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid var(--border);
-  }
-  .author-info { flex: 1; }
-  .author-name {
-    font-weight: 600;
-    font-size: 15px;
-  }
-  .author-meta {
-    display: flex;
-    gap: 12px;
-    color: var(--text-muted);
-    font-size: 12px;
-    margin-top: 2px;
-  }
-  .platform-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
-    border-radius: 4px;
-    background: var(--accent);
-    color: #fff;
-    font-size: 11px;
-    font-weight: 600;
-  }
+/* ── Examples ── */
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+  align-items: center;
+}
+.examples-label {
+  font-size: 13px;
+  color: var(--text-3);
+  margin-right: 2px;
+}
+.example-tag {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.example-tag:hover {
+  border-color: var(--accent);
+  color: var(--text);
+  background: rgba(254,44,85,.06);
+}
 
-  /* Content Body */
-  .content-body {
-    padding: 20px;
-  }
-  .content-title {
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 1.5;
-    margin-bottom: 16px;
-    word-break: break-word;
-  }
-  .content-title::before {
-    content: '"';
-    color: var(--accent);
-  }
-  .content-title::after {
-    content: '"';
-    color: var(--accent);
-  }
+/* ── History ── */
+.history-bar {
+  display: none;
+  margin-bottom: 20px;
+}
+.history-bar.active { display: block; }
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.history-header span {
+  font-size: 13px;
+  color: var(--text-3);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.history-clear {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all .2s;
+}
+.history-clear:hover { background: var(--surface-2); color: var(--error); }
+.history-list {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.history-list::-webkit-scrollbar { display: none; }
+.history-item {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all .2s;
+  max-width: 200px;
+}
+.history-item:hover { border-color: var(--accent); background: var(--surface-2); }
+.history-item img {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.history-item-text {
+  overflow: hidden;
+}
+.history-item-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-item-meta {
+  font-size: 11px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
 
-  /* Video Player */
-  .video-container {
-    position: relative;
-    width: 100%;
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-    background: #000;
-    margin-bottom: 16px;
-  }
-  .video-container video {
-    width: 100%;
-    display: block;
-    max-height: 500px;
-    background: #000;
-  }
-  .video-info {
-    display: flex;
-    gap: 16px;
-    padding: 8px 0 16px;
-    color: var(--text-muted);
-    font-size: 13px;
-  }
-  .video-info span {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
+/* ── Loading ── */
+.loading {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  padding: 50px 0 40px;
+  gap: 20px;
+}
+.loading.active { display: flex; animation: fadeIn .3s ease; }
 
-  /* Image Gallery */
-  .gallery {
-    display: grid;
-    gap: 8px;
-    margin-bottom: 16px;
-  }
-  .gallery-1 { grid-template-columns: 1fr; }
-  .gallery-2 { grid-template-columns: 1fr 1fr; }
-  .gallery-3, .gallery-4 { grid-template-columns: 1fr 1fr; }
-  .gallery-many { grid-template-columns: repeat(3, 1fr); }
-  .gallery img {
-    width: 100%;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: transform .2s;
-    display: block;
-  }
-  .gallery img:hover { transform: scale(1.02); }
+.douyin-loader {
+  position: relative;
+  width: 56px;
+  height: 56px;
+}
+.douyin-loader .ring {
+  position: absolute;
+  inset: 0;
+  border: 3px solid transparent;
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .9s cubic-bezier(.5,0,.5,1) infinite;
+}
+.douyin-loader .ring:nth-child(2) {
+  inset: 6px;
+  border-top-color: var(--accent-2);
+  animation-duration: 1.2s;
+  animation-direction: reverse;
+}
+.douyin-loader .ring:nth-child(3) {
+  inset: 12px;
+  border-top-color: var(--warning);
+  animation-duration: .7s;
+}
+.douyin-loader .pulse-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse 1s ease-in-out infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse {
+  0%,100% { transform: scale(1); opacity:1; }
+  50% { transform: scale(1.6); opacity:.3; }
+}
 
-  /* Image Viewer (lightbox) */
-  .viewer {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,.92);
-    z-index: 999;
-    justify-content: center;
-    align-items: center;
-    padding: 40px;
-  }
-  .viewer.active { display: flex; }
-  .viewer img {
-    max-width: 90vw;
-    max-height: 90vh;
-    object-fit: contain;
-    border-radius: 8px;
-  }
-  .viewer-close {
-    position: absolute;
-    top: 20px;
-    right: 24px;
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 28px;
-    cursor: pointer;
-    opacity: .6;
-    transition: opacity .2s;
-  }
-  .viewer-close:hover { opacity: 1; }
+.loading-text {
+  color: var(--text-3);
+  font-size: 14px;
+  display: flex;
+  gap: 4px;
+}
+.loading-text .dots span {
+  animation: dots 1.4s infinite;
+  opacity: 0;
+}
+.loading-text .dots span:nth-child(2) { animation-delay: .2s; }
+.loading-text .dots span:nth-child(3) { animation-delay: .4s; }
+@keyframes dots {
+  0%,60%,100% { opacity:0; }
+  30% { opacity:1; }
+}
 
-  /* Footer */
-  .footer {
-    color: var(--text-muted);
-    font-size: 12px;
-    padding: 32px 16px;
-    text-align: center;
-    opacity: .5;
-  }
+/* ── Steps ── */
+.steps {
+  display: flex;
+  gap: 32px;
+  margin-top: 4px;
+}
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-3);
+  font-size: 12px;
+  opacity: .4;
+  transition: all .35s;
+}
+.step.active { opacity: 1; color: var(--accent); }
+.step.done { opacity: 1; color: var(--success); }
+.step-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  transition: all .35s;
+  position: relative;
+}
+.step.active .step-dot {
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+  animation: stepPulse 1s ease-in-out infinite;
+}
+.step.done .step-dot {
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success);
+}
+.step.done .step-dot::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 6px;
+  color: #fff;
+  font-weight: bold;
+}
+@keyframes stepPulse {
+  0%,100% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+}
 
-  /* Status Badge */
-  .status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .status-success {
-    background: rgba(16,185,129,.15);
-    color: var(--success);
-  }
+/* ── Error Card ── */
+.result-error {
+  display: none;
+  background: var(--surface);
+  border: 1px solid rgba(239,68,68,.25);
+  border-radius: var(--radius);
+  padding: 28px 24px;
+  box-shadow: var(--shadow);
+  text-align: center;
+  animation: slideUp .4s var(--transition);
+}
+.result-error.active { display: block; }
+.result-error .icon { font-size: 40px; margin-bottom: 12px; line-height: 1; }
+.result-error h3 { color: var(--error); font-size: 17px; margin-bottom: 6px; }
+.result-error p { color: var(--text-3); font-size: 14px; line-height: 1.5; }
+.result-error .elapsed { color: var(--text-3); font-size: 12px; margin-top: 16px; opacity: .6; }
 
-  /* Responsive */
-  @media (max-width: 600px) {
-    .container { padding: 16px 12px; }
-    .input-row { flex-direction: column; }
-    .btn { justify-content: center; }
-    .gallery-many { grid-template-columns: repeat(2, 1fr); }
-    .author-bar { padding: 12px 14px; }
-    .content-body { padding: 14px; }
-  }
+/* ── Result Card ── */
+.result {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  animation: slideUp .45s var(--transition);
+}
+.result.active { display: block; }
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(20px) scale(.97); }
+  to { opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+/* ── Author Bar ── */
+.author-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.author-avatar {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--accent);
+  flex-shrink: 0;
+  background: var(--surface-2);
+}
+.author-avatar.loading {
+  animation: avatarPulse 1.5s infinite;
+}
+@keyframes avatarPulse {
+  0%,100% { opacity: .3; }
+  50% { opacity: .6; }
+}
+.author-info { flex: 1; min-width: 0; }
+.author-name {
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.author-name .verified {
+  display: inline-flex;
+  width: 16px; height: 16px;
+  background: var(--accent);
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.author-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--text-3);
+  font-size: 12px;
+  margin-top: 3px;
+  align-items: center;
+}
+.platform-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 4px;
+  background: rgba(254,44,85,.15);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* ── Content Body ── */
+.content-body { padding: 20px; }
+
+/* ── Title ── */
+.content-title {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.6;
+  margin-bottom: 18px;
+  word-break: break-word;
+  padding: 14px 18px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--accent);
+  color: var(--text-2);
+}
+
+/* ── Video Section ── */
+.video-container {
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: #000;
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+.video-container video {
+  width: 100%;
+  display: block;
+  max-height: 560px;
+  background: #000;
+  outline: none;
+}
+.video-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.video-actions .btn {
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: all .2s var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font);
+  text-decoration: none;
+}
+.video-actions .btn-download {
+  background: var(--accent-gradient);
+  color: #fff;
+}
+.video-actions .btn-download:hover { transform: translateY(-1px); }
+.video-actions .btn-copy {
+  background: var(--surface-2);
+  color: var(--text-2);
+  border: 1px solid var(--border-light);
+}
+.video-actions .btn-copy:hover { border-color: var(--text-3); color: var(--text); }
+.video-actions .btn-pip {
+  background: var(--surface-2);
+  color: var(--text-2);
+  border: 1px solid var(--border-light);
+}
+.video-actions .btn-pip:hover { border-color: var(--text-3); color: var(--text); }
+.video-info {
+  display: flex;
+  gap: 20px;
+  color: var(--text-3);
+  font-size: 12px;
+  padding: 0 2px 14px;
+}
+.video-info span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── Image Gallery ── */
+.gallery {
+  display: none;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.gallery.active { display: grid; }
+.gallery-1 { grid-template-columns: 1fr; }
+.gallery-2 { grid-template-columns: 1fr 1fr; }
+.gallery-3, .gallery-4 { grid-template-columns: 1fr 1fr; }
+.gallery-many { grid-template-columns: repeat(3, 1fr); }
+.gallery-item {
+  position: relative;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  aspect-ratio: 1;
+  background: var(--surface-2);
+}
+.gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform .3s;
+  display: block;
+}
+.gallery-item:hover img { transform: scale(1.06); }
+.gallery-item .overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.3);
+  opacity: 0;
+  transition: opacity .25s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 24px;
+}
+.gallery-item:hover .overlay { opacity: 1; }
+
+/* ── Lightbox ── */
+.viewer {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.94);
+  z-index: 9998;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.viewer.active { display: flex; animation: fadeIn .25s ease; }
+.viewer-img {
+  max-width: 94vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+  animation: zoomIn .3s var(--transition);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+@keyframes zoomIn {
+  from { opacity:0; transform:scale(.9); }
+  to { opacity:1; transform:scale(1); }
+}
+.viewer-close {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  background: rgba(0,0,0,.5);
+  border: 1px solid rgba(255,255,255,.1);
+  color: #fff;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.viewer-close:hover { background: rgba(255,255,255,.15); transform: scale(1.1); }
+.viewer-counter {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,.6);
+  font-size: 14px;
+  background: rgba(0,0,0,.5);
+  padding: 6px 16px;
+  border-radius: 20px;
+}
+.viewer-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,.5);
+  border: 1px solid rgba(255,255,255,.1);
+  color: #fff;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity .25s, transform .2s;
+}
+.viewer:hover .viewer-nav { opacity: .6; }
+.viewer-nav:hover { opacity: 1 !important; background: rgba(255,255,255,.15); }
+.viewer-prev { left: 20px; }
+.viewer-next { right: 20px; }
+
+/* ── Source URL ── */
+.source-url {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-3);
+  word-break: break-all;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.source-url code {
+  background: var(--surface-2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Curl Command ── */
+.curl-box {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.curl-box code {
+  flex: 1;
+  overflow-x: auto;
+  white-space: nowrap;
+  color: var(--text-2);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+}
+.curl-box .btn-copy-curl {
+  background: none;
+  border: 1px solid var(--border-light);
+  color: var(--text-3);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .2s;
+  flex-shrink: 0;
+  font-family: var(--font);
+}
+.curl-box .btn-copy-curl:hover { border-color: var(--text-2); color: var(--text); }
+
+/* ── Footer ── */
+.footer {
+  color: var(--text-3);
+  font-size: 12px;
+  padding: 28px 16px;
+  text-align: center;
+  opacity: .4;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .header { padding: 28px 16px 20px; }
+  .header h1 { font-size: 20px; }
+  .header p { font-size: 13px; }
+  .container { padding: 16px 12px; }
+  .input-card { padding: 18px; }
+  .input-row { flex-direction: column; }
+  .input-row .btn { justify-content: center; padding: 13px 20px; }
+  .author-bar { padding: 14px 16px; flex-wrap: wrap; }
+  .author-avatar { width: 38px; height: 38px; }
+  .content-body { padding: 16px; }
+  .steps { gap: 20px; }
+  .gallery-many { grid-template-columns: repeat(2, 1fr); }
+  .viewer-nav { display: flex !important; opacity: .4; }
+  .viewer-prev { left: 10px; }
+  .viewer-next { right: 10px; }
+  .history-item { max-width: 160px; }
+  .video-actions .btn { font-size: 12px; padding: 8px 14px; }
+  .curl-box { flex-direction: column; align-items: stretch; }
+  .curl-box code { white-space: normal; word-break: break-all; }
+}
+
+@media (max-width: 400px) {
+  .gallery-3, .gallery-4 { grid-template-columns: 1fr; }
+  .gallery-many { grid-template-columns: repeat(2, 1fr); }
+}
 </style>
 </head>
 <body>
 
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Header -->
 <div class="header">
   <div class="header-logo">
     <svg viewBox="0 0 24 24" fill="none">
@@ -435,44 +885,67 @@
 </div>
 
 <div class="container">
-  <!-- Input -->
+  <!-- Input Card -->
   <div class="input-card">
-    <label for="url-input">抖音分享链接</label>
+    <label for="url-input">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      抖音分享链接
+    </label>
     <div class="input-row">
       <input
         id="url-input"
         type="url"
-        placeholder="https://v.douyin.com/xxxxx/"
+        placeholder="粘贴链接或分享文本..."
         autocomplete="off"
         spellcheck="false"
+        autofocus
       />
       <button class="btn btn-primary" id="parse-btn" onclick="parse()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-        </svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         解析
       </button>
     </div>
+    <div class="paste-hint" id="paste-hint">
+      <span>📋</span>
+      <span>检测到链接，自动解析中...</span>
+    </div>
     <div class="examples">
-      <span>试试：</span>
+      <span class="examples-label">试试：</span>
       <span class="example-tag" onclick="fillUrl('https://v.douyin.com/_2ljF4AmKL8/')">短链接</span>
       <span class="example-tag" onclick="fillUrl('https://www.douyin.com/video/7521023890996514083')">标准视频</span>
       <span class="example-tag" onclick="fillUrl('https://www.douyin.com/note/7469411074119322899')">图文</span>
     </div>
   </div>
 
+  <!-- History -->
+  <div class="history-bar" id="history-bar">
+    <div class="history-header">
+      <span>📜 最近解析</span>
+      <button class="history-clear" onclick="clearHistory()">清空</button>
+    </div>
+    <div class="history-list" id="history-list"></div>
+  </div>
+
   <!-- Loading -->
   <div class="loading" id="loading">
-    <div class="spinner"></div>
-    <p>正在解析</p>
+    <div class="douyin-loader">
+      <div class="ring"></div>
+      <div class="ring"></div>
+      <div class="ring"></div>
+      <div class="pulse-dot"></div>
+    </div>
+    <div class="loading-text">
+      正在解析
+      <span class="dots"><span>.</span><span>.</span><span>.</span></span>
+    </div>
     <div class="steps">
       <div class="step active" id="step1">
         <div class="step-dot"></div>
-        <span>请求链接</span>
+        <span>请求数据</span>
       </div>
       <div class="step" id="step2">
         <div class="step-dot"></div>
-        <span>提取数据</span>
+        <span>提取内容</span>
       </div>
       <div class="step" id="step3">
         <div class="step-dot"></div>
@@ -495,12 +968,12 @@
     <div class="author-bar">
       <img class="author-avatar" id="author-avatar" src="" alt="avatar" />
       <div class="author-info">
-        <div class="author-name" id="author-name">—</div>
+        <div class="author-name" id="author-name">— <span class="verified">✓</span></div>
         <div class="author-meta">
-          <span class="platform-badge" id="platform-badge">抖音</span>
-          <span id="content-type">视频</span>
-          <span id="publish-time">—</span>
-          <span id="parse-elapsed"></span>
+          <span class="platform-badge" id="platform-badge">▣ 抖音</span>
+          <span class="meta-item" id="content-type">🎬 视频</span>
+          <span class="meta-item" id="publish-time"></span>
+          <span class="meta-item" id="parse-elapsed"></span>
         </div>
       </div>
     </div>
@@ -516,24 +989,32 @@
         </div>
         <div class="video-info">
           <span>📹 无水印</span>
-          <span id="video-duration">⏱ —</span>
+          <span id="video-duration">⏱ 加载中...</span>
         </div>
-        <!-- Download row -->
-        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-          <a class="btn btn-primary" id="download-btn" target="_blank" rel="noopener" style="text-decoration:none;font-size:13px;padding:8px 16px">
+        <div class="video-actions">
+          <a class="btn btn-download" id="download-btn" target="_blank" rel="noopener">
             ⬇️ 下载视频
           </a>
-          <a class="btn btn-secondary" id="copy-link-btn" target="_blank" rel="noopener" style="text-decoration:none;font-size:13px;padding:8px 16px">
+          <button class="btn btn-copy" id="copy-link-btn">
             🔗 复制直链
-          </a>
+          </button>
+          <button class="btn btn-pip" id="pip-btn">
+            🖥️ 画中画
+          </button>
         </div>
       </div>
 
-      <!-- Images -->
-      <div class="gallery" id="image-gallery" style="display:none"></div>
+      <!-- Gallery -->
+      <div class="gallery" id="image-gallery"></div>
+
+      <!-- Curl -->
+      <div class="curl-box" id="curl-box" style="display:none">
+        <code id="curl-code"></code>
+        <button class="btn-copy-curl" id="copy-curl-btn" onclick="copyCurl()">复制</button>
+      </div>
 
       <!-- Source -->
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--text-muted);word-break:break-all" id="source-url"></div>
+      <div class="source-url" id="source-url"></div>
     </div>
   </div>
 </div>
@@ -541,27 +1022,102 @@
 <!-- Lightbox -->
 <div class="viewer" id="viewer" onclick="closeViewer()">
   <button class="viewer-close">&times;</button>
-  <img id="viewer-img" src="" alt="preview" />
+  <button class="viewer-nav viewer-prev" id="viewer-prev" onclick="event.stopPropagation();viewerNav(-1)">‹</button>
+  <img class="viewer-img" id="viewer-img" src="" alt="preview" />
+  <button class="viewer-nav viewer-next" id="viewer-next" onclick="event.stopPropagation();viewerNav(1)">›</button>
+  <div class="viewer-counter" id="viewer-counter"></div>
 </div>
 
 <div class="footer">
-  Powered by Hermes Agent · 抖音内容解析
+  Powered by Hermes Agent · 抖音内容解析服务 v2
 </div>
 
 <script>
-// ── 媒体代理工具 ──
+// ── State ──
+let viewerImages = [];
+let viewerIndex = 0;
+let lastParseData = null;
+let lastParseUrl = '';
+
+// ── Media Proxy ──
 function proxyUrl(url) {
   if (!url) return '';
   return '/api/proxy/media?url=' + encodeURIComponent(url);
 }
 
-// ── 工具 ──
+// ── Toast ──
+function toast(msg, type = 'success') {
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = 'toast toast-' + type;
+  el.innerHTML = '<span class="toast-icon">' + (type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ') + '</span>' + msg;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 300);
+  }, 2500);
+}
+
+// ── History ──
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem('dy_history') || '[]'); } catch { return []; }
+}
+function addHistory(name, avatar, type) {
+  let h = getHistory();
+  h = h.filter(x => x.name !== name);
+  h.unshift({ name, avatar, type, time: Date.now() });
+  if (h.length > 12) h = h.slice(0, 12);
+  localStorage.setItem('dy_history', JSON.stringify(h));
+  renderHistory();
+}
+function clearHistory() {
+  localStorage.removeItem('dy_history');
+  renderHistory();
+}
+function renderHistory() {
+  const h = getHistory();
+  const bar = document.getElementById('history-bar');
+  const list = document.getElementById('history-list');
+  if (h.length === 0) { bar.classList.remove('active'); return; }
+  bar.classList.add('active');
+  list.innerHTML = h.map(item => `
+    <div class="history-item" onclick="fillUrl('${escapeHtml(lastParseUrl || '')}')">
+      <img src="${item.avatar || ''}" alt="" onerror="this.style.display='none'" />
+      <div class="history-item-text">
+        <div class="history-item-name">${escapeHtml(item.name)}</div>
+        <div class="history-item-meta">${item.type || '视频'}</div>
+      </div>
+    </div>
+  `).join('');
+}
+function escapeHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Paste Detection ──
+let pasteTimer = null;
+document.getElementById('url-input').addEventListener('paste', function(e) {
+  setTimeout(() => {
+    const val = this.value.trim();
+    if (val && /douyin\.com|iesdouyin|v\.douyin/.test(val)) {
+      document.getElementById('paste-hint').classList.add('active');
+      clearTimeout(pasteTimer);
+      pasteTimer = setTimeout(() => {
+        document.getElementById('paste-hint').classList.remove('active');
+        parse();
+      }, 500);
+    }
+  }, 50);
+});
+
+// ── Fill & Parse ──
 function fillUrl(url) {
   document.getElementById('url-input').value = url;
   parse();
 }
 
-// 格式化时间戳
+// ── Formatters ──
 function fmtTime(ts) {
   const d = new Date(ts * 1000);
   const now = new Date();
@@ -570,17 +1126,16 @@ function fmtTime(ts) {
   if (diff < 3600) return Math.floor(diff/60) + '分钟前';
   if (diff < 86400) return Math.floor(diff/3600) + '小时前';
   if (diff < 2592000) return Math.floor(diff/86400) + '天前';
-  return d.toLocaleDateString('zh-CN');
+  return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', year: 'numeric' });
 }
-
 function fmtDuration(sec) {
-  if (!sec) return '—';
+  if (!sec && sec !== 0) return '—';
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
   return m + ':' + s.toString().padStart(2, '0');
 }
 
-// ── 步骤动画 ──
+// ── Loading Steps ──
 function setStep(n, status) {
   for (let i = 1; i <= 3; i++) {
     const el = document.getElementById('step' + i);
@@ -590,41 +1145,58 @@ function setStep(n, status) {
   }
 }
 
-// ── 图片查看器 ──
-function openViewer(src) {
-  document.getElementById('viewer-img').src = src;
+// ── Lightbox ──
+function openViewer(src, images, idx) {
+  if (images) { viewerImages = images; viewerIndex = idx; }
+  else { viewerImages = [src]; viewerIndex = 0; }
+  updateViewer();
   document.getElementById('viewer').classList.add('active');
+  document.body.style.overflow = 'hidden';
 }
 function closeViewer() {
   document.getElementById('viewer').classList.remove('active');
+  document.body.style.overflow = '';
 }
-document.addEventListener('keydown', e => {
+function viewerNav(dir) {
+  viewerIndex = (viewerIndex + dir + viewerImages.length) % viewerImages.length;
+  updateViewer();
+}
+function updateViewer() {
+  const img = document.getElementById('viewer-img');
+  img.src = proxyUrl(viewerImages[viewerIndex]);
+  document.getElementById('viewer-counter').textContent =
+    viewerImages.length > 1 ? (viewerIndex + 1) + ' / ' + viewerImages.length : '';
+}
+document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeViewer();
+  if (e.key === 'ArrowLeft' && document.getElementById('viewer').classList.contains('active')) viewerNav(-1);
+  if (e.key === 'ArrowRight' && document.getElementById('viewer').classList.contains('active')) viewerNav(1);
 });
 
-// ── 主解析函数 ──
+// ── Main Parse ──
 async function parse() {
   const url = document.getElementById('url-input').value.trim();
   if (!url) {
     document.getElementById('url-input').focus();
+    toast('请输入抖音分享链接', 'error');
     return;
   }
+  lastParseUrl = url;
 
-  // UI 重置
+  // Reset UI
   document.getElementById('result').classList.remove('active');
   document.getElementById('error-box').classList.remove('active');
+  document.getElementById('paste-hint').classList.remove('active');
   const loading = document.getElementById('loading');
   loading.classList.add('active');
   document.getElementById('parse-btn').disabled = true;
   setStep(1, 'active');
 
   try {
-    // 1) 请求
     setStep(1, 'active');
     const resp = await fetch('/api/parse?url=' + encodeURIComponent(url));
     setStep(2, 'active');
 
-    // 2) 解析
     setStep(2, 'done');
     setStep(3, 'active');
 
@@ -632,8 +1204,8 @@ async function parse() {
 
     setStep(3, 'done');
 
-    // 延迟一下让动画走完
-    await new Promise(r => setTimeout(r, 400));
+    // Let animation play
+    await new Promise(r => setTimeout(r, 350));
 
     loading.classList.remove('active');
     document.getElementById('parse-btn').disabled = false;
@@ -653,111 +1225,184 @@ async function parse() {
 }
 
 function showError(msg, elapsed) {
+  const errorBox = document.getElementById('error-box');
+  errorBox.classList.remove('active');
+  // Force reflow for animation
+  void errorBox.offsetWidth;
   document.getElementById('error-title').textContent = '解析失败';
   document.getElementById('error-detail').textContent = msg || '请检查链接是否正确';
-  document.getElementById('error-elapsed').textContent = elapsed ? `耗时 ${elapsed}s` : '';
-  document.getElementById('error-box').classList.add('active');
+  document.getElementById('error-elapsed').textContent = elapsed ? '⏱ ' + elapsed + 's' : '';
+  errorBox.classList.add('active');
 }
 
 function renderResult(d, elapsed) {
-  // 作者
-  document.getElementById('author-name').textContent = d.author?.name || '未知';
-  // 作者头像
+  lastParseData = d;
+
+  // ── Author ──
+  const authorName = d.author?.name || '未知用户';
+  document.getElementById('author-name').innerHTML = escapeHtml(authorName) + ' <span class="verified">✓</span>';
+
   const avatarEl = document.getElementById('author-avatar');
+  avatarEl.classList.add('loading');
   if (d.author?.avatar_url) {
     avatarEl.src = proxyUrl(d.author.avatar_url);
-    avatarEl.onerror = () => { avatarEl.style.display = 'none'; };
+    avatarEl.onload = () => avatarEl.classList.remove('loading');
+    avatarEl.onerror = () => { avatarEl.style.display = 'none'; avatarEl.classList.remove('loading'); };
     avatarEl.style.display = '';
   } else {
     avatarEl.style.display = 'none';
+    avatarEl.classList.remove('loading');
   }
 
-  document.getElementById('platform-badge').textContent = d.platform || '抖音';
-  document.getElementById('content-type').textContent = d.type || '视频';
+  document.getElementById('platform-badge').textContent = '▣ ' + (d.platform || '抖音');
+  document.getElementById('content-type').textContent = (d.type === '视频' ? '🎬 ' : '📷 ') + (d.type || '视频');
 
-  // 时间
   const timeEl = document.getElementById('publish-time');
   if (d.create_time) {
-    timeEl.textContent = fmtTime(d.create_time);
+    timeEl.textContent = '🕐 ' + fmtTime(d.create_time);
+    timeEl.style.display = '';
   } else {
-    timeEl.textContent = '';
+    timeEl.style.display = 'none';
   }
 
-  document.getElementById('parse-elapsed').textContent = elapsed ? `⚡ ${elapsed}s` : '';
+  document.getElementById('parse-elapsed').textContent = elapsed ? '⚡ ' + elapsed + 's' : '';
 
-  // 标题
+  // ── Title ──
   document.getElementById('content-title').textContent = d.title || '(无标题)';
 
-// 视频
+  // ── Video ──
   const videoSection = document.getElementById('video-section');
   const videoPlayer = document.getElementById('video-player');
   if (d.video?.url) {
     videoSection.style.display = 'block';
-    videoPlayer.src = proxyUrl(d.video.url);
-    videoPlayer.poster = proxyUrl(d.video.cover_url) || '';
-    document.getElementById('video-duration').textContent = '⏱ ' + fmtDuration(d.video.duration);
+    const vUrl = proxyUrl(d.video.url);
+    videoPlayer.src = vUrl;
+    if (d.video.cover_url) videoPlayer.poster = proxyUrl(d.video.cover_url);
 
-    // 下载按钮
-    const dlBtn = document.getElementById('download-btn');
-    dlBtn.href = proxyUrl(d.video.url) + '&download=1';
+    const durEl = document.getElementById('video-duration');
+    if (d.video.duration) {
+      durEl.textContent = '⏱ ' + fmtDuration(d.video.duration);
+    } else {
+      durEl.textContent = '⏱ 计算中...';
+      videoPlayer.addEventListener('loadedmetadata', function onMeta() {
+        durEl.textContent = '⏱ ' + fmtDuration(videoPlayer.duration);
+        videoPlayer.removeEventListener('loadedmetadata', onMeta);
+      }, { once: true });
+    }
 
-    // 复制直链按钮
-    const copyBtn = document.getElementById('copy-link-btn');
-    copyBtn.onclick = (e) => {
-      e.preventDefault();
+    // Download button
+    document.getElementById('download-btn').href = vUrl + '&download=1';
+
+    // Copy link button
+    document.getElementById('copy-link-btn').onclick = function(e) {
       navigator.clipboard.writeText(d.video.url).then(() => {
-        copyBtn.textContent = '✅ 已复制';
-        setTimeout(() => { copyBtn.textContent = '🔗 复制直链'; }, 2000);
-      });
+        toast('直链已复制到剪贴板');
+        this.innerHTML = '✅ 已复制';
+        setTimeout(() => { this.innerHTML = '🔗 复制直链'; }, 2000);
+      }).catch(() => toast('复制失败', 'error'));
     };
+
+    // PiP button
+    document.getElementById('pip-btn').onclick = function() {
+      if (document.pictureInPictureElement) {
+        document.exitPictureInPicture();
+      } else if (videoPlayer.requestPictureInPicture) {
+        videoPlayer.requestPictureInPicture().catch(() => toast('画中画不可用', 'error'));
+      } else {
+        toast('当前浏览器不支持画中画', 'error');
+      }
+    };
+
   } else {
     videoSection.style.display = 'none';
     videoPlayer.src = '';
   }
 
-  // 图片 gallery
+  // ── Gallery ──
   const gallery = document.getElementById('image-gallery');
   gallery.innerHTML = '';
+  gallery.classList.remove('active');
   if (d.contents && d.contents.length > 0) {
     const imgs = d.contents.filter(c => c.type === 'image');
-    const total = imgs.length;
+    const imageUrls = imgs.map(i => i.url);
+    const total = imageUrls.length;
 
     if (total > 0) {
-      gallery.style.display = 'grid';
-      if (total === 1) gallery.className = 'gallery gallery-1';
-      else if (total === 2) gallery.className = 'gallery gallery-2';
-      else if (total <= 4) gallery.className = 'gallery gallery-3';
-      else gallery.className = 'gallery gallery-many';
+      gallery.classList.add('active');
+      gallery.className = 'gallery active';
+      if (total === 1) gallery.classList.add('gallery-1');
+      else if (total === 2) gallery.classList.add('gallery-2');
+      else if (total <= 4) gallery.classList.add('gallery-3');
+      else gallery.classList.add('gallery-many');
 
-      imgs.forEach(img => {
-        const el = document.createElement('img');
-        el.src = proxyUrl(img.url);
-        el.loading = 'lazy';
-        el.onclick = () => openViewer(proxyUrl(img.url));
-        gallery.appendChild(el);
+      imageUrls.forEach((imgUrl, idx) => {
+        const item = document.createElement('div');
+        item.className = 'gallery-item';
+        const img = document.createElement('img');
+        img.src = proxyUrl(imgUrl);
+        img.loading = 'lazy';
+        img.alt = '图片 ' + (idx + 1);
+        item.appendChild(img);
+        const overlay = document.createElement('div');
+        overlay.className = 'overlay';
+        overlay.textContent = '🔍';
+        item.appendChild(overlay);
+        item.onclick = () => openViewer(imgUrl, imageUrls, idx);
+        gallery.appendChild(item);
       });
-    } else {
-      gallery.style.display = 'none';
     }
-  } else {
-    gallery.style.display = 'none';
   }
 
-  // 来源
+  // ── Curl ──
+  const curlBox = document.getElementById('curl-box');
+  if (d.video?.url) {
+    curlBox.style.display = 'flex';
+    document.getElementById('curl-code').textContent =
+      'curl -o douyin_' + Date.now() + '.mp4 "' + window.location.origin + '/api/proxy/media?url=' + encodeURIComponent(d.video.url) + '&download=1"';
+  } else if (d.contents?.length) {
+    curlBox.style.display = 'flex';
+    document.getElementById('curl-code').textContent =
+      '# 解析成功，共 ' + d.contents.length + ' 项媒体';
+  } else {
+    curlBox.style.display = 'none';
+  }
+
+  // ── Source ──
   const sourceEl = document.getElementById('source-url');
-  sourceEl.textContent = d.source_url ? '来源：' + d.source_url : '';
+  sourceEl.innerHTML = d.source_url
+    ? '<span>🔗 来源</span><code>' + escapeHtml(d.source_url) + '</code>'
+    : '';
 
-  // 显示结果
-  document.getElementById('result').classList.add('active');
+  // ── Show ──
+  const result = document.getElementById('result');
+  result.classList.remove('active');
+  void result.offsetWidth; // reflow for animation
+  result.classList.add('active');
 
-  // 滚动到结果
-  document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // ── Scroll ──
+  setTimeout(() => {
+    result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+
+  // ── History ──
+  addHistory(authorName, d.author?.avatar_url ? proxyUrl(d.author.avatar_url) : '', d.type);
 }
 
-// ── 回车触发 ──
-document.getElementById('url-input').addEventListener('keydown', e => {
+// ── Copy Curl ──
+function copyCurl() {
+  const code = document.getElementById('curl-code').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    toast('cURL 命令已复制');
+  }).catch(() => toast('复制失败', 'error'));
+}
+
+// ── Enter key ──
+document.getElementById('url-input').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') parse();
 });
+
+// ── Init History ──
+renderHistory();
 </script>
 </body>
 </html>
