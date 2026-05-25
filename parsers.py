@@ -197,7 +197,6 @@ async def resolve_short_url(url: str) -> str:
         headers=headers,
         follow_redirects=False,
         timeout=COMMON_TIMEOUT,
-        verify=False,
     ) as client:
         resp = await client.get(url)
         location = resp.headers.get("Location", "")
@@ -295,7 +294,7 @@ async def parse_douyin_url(raw_url: str) -> dict:
     last_error: Exception | None = None
     for candidate in candidate_urls:
         try:
-            return await _parse_from_page(candidate)
+            return _build_result(video_data, source_url=url, item_id=vid)
         except ParseError as e:
             last_error = e
             continue
@@ -306,7 +305,7 @@ async def parse_douyin_url(raw_url: str) -> dict:
     )
 
 
-async def _parse_from_page(url: str) -> dict:
+async def _parse_from_page(url: str) -> VideoData:
     """请求移动端页面，从 HTML 提取 _ROUTER_DATA"""
     headers = {
         "User-Agent": random.choice(MOBILE_UAS),
@@ -319,7 +318,6 @@ async def _parse_from_page(url: str) -> dict:
         headers=headers,
         follow_redirects=False,
         timeout=COMMON_TIMEOUT,
-        verify=False,
     ) as client:
         resp = await client.get(url)
 
@@ -345,7 +343,7 @@ async def _parse_from_page(url: str) -> dict:
 
     video_data = router_data.video_data
 
-    return _build_result(video_data, url)
+    return video_data
 
 
 async def _parse_slides(vid: str) -> dict:
@@ -364,7 +362,6 @@ async def _parse_slides(vid: str) -> dict:
     async with httpx.AsyncClient(
         headers=headers,
         timeout=COMMON_TIMEOUT,
-        verify=False,
     ) as client:
         resp = await client.get(api_url, params=params)
         resp.raise_for_status()
@@ -403,18 +400,21 @@ async def _parse_slides(vid: str) -> dict:
     }
 
 
-def _build_result(video_data: VideoData, source_url: str) -> dict:
+def _build_result(video_data: VideoData, source_url: str, item_id: str) -> dict:
     """将 VideoData 转为统一返回格式"""
     contents: list[dict] = []
 
+    image_urls = video_data.image_urls
+
     # 图集（图片）
-    if image_urls := video_data.image_urls:
+    if image_urls:
         for url in image_urls:
             contents.append({"type": "image", "url": url})
 
     # 视频
     video_info = None
-    if video_url := video_data.video_url:
+    video_url = video_data.video_url
+    if video_url:
         video_info = {
             "url": video_url,
             "cover_url": video_data.cover_url,
@@ -423,10 +423,12 @@ def _build_result(video_data: VideoData, source_url: str) -> dict:
         if not contents:  # 纯视频（无图集）
             contents.append({"type": "video", "url": video_url})
 
+    content_type = "视频" if video_info and not image_urls else "图文" if image_urls else "动态"
+
     return {
         "platform": "抖音",
-        "type": "视频" if video_info and not video_data.image_urls else "图文" if video_data.image_urls else "动态",
-        "id": "",
+        "type": content_type,
+        "id": item_id,
         "title": video_data.desc or "(无标题)",
         "author": {
             "name": video_data.author.nickname,

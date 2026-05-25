@@ -14,17 +14,21 @@
 
 import time
 import random
+import asyncio
+import logging
 from pathlib import Path
+from urllib.parse import urljoin, urlsplit
 
 import httpx
-import asyncio
-from fastapi import FastAPI, HTTPException, Query, Request, Response
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from parsers import parse_douyin_url, ParseError, MOBILE_UAS
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="抖音解析服务",
@@ -118,6 +122,32 @@ class ParseResponse(BaseModel):
 
 # ── 媒体代理 ─────────────────────────────────────────
 
+ALLOWED_MEDIA_HOSTS = {
+    "aweme.snssdk.com",
+}
+ALLOWED_MEDIA_HOST_SUFFIXES = (
+    ".douyinpic.com",
+    ".douyinvod.com",
+    ".byteimg.com",
+    ".byted-static.com",
+    ".bytegoofy.com",
+)
+MAX_REDIRECTS = 3
+PROXY_TIMEOUT = httpx.Timeout(60.0, connect=10.0)
+
+
+@app.on_event("startup")
+async def startup_event() -> None:
+    app.state.media_client = httpx.AsyncClient(timeout=PROXY_TIMEOUT, follow_redirects=False)
+
+
+@app.on_event("shutdown")
+async def shutdown_event() -> None:
+    client = getattr(app.state, "media_client", None)
+    if client is not None:
+        await client.aclose()
+
+
 def get_media_headers():
     """生成随机的请求头（降低被拦截概率）"""
     return {
@@ -130,6 +160,50 @@ def get_media_headers():
         "Sec-Fetch-Mode": "no-cors",
         "Sec-Fetch-Site": "cross-site",
     }
+
+
+def _is_allowed_media_host(hostname: str) -> bool:
+    host = hostname.lower().rstrip(".")
+    return host in ALLOWED_MEDIA_HOSTS or host.endswith(ALLOWED_MEDIA_HOST_SUFFIXES)
+
+
+def validate_media_proxy_url(raw_url: str) -> str:
+    parsed = urlsplit(raw_url)
+    if parsed.scheme not in {"http", "https"}:
+        raise HTTPException(status_code=400, detail="仅支持代理 http/https 媒体地址")
+
+    hostname = parsed.hostname
+    if not hostname:
+        raise HTTPException(status_code=400, detail="媒体地址缺少主机名")
+
+    if not _is_allowed_media_host(hostname):
+        raise HTTPException(status_code=400, detail="仅支持代理抖音媒体地址")
+
+    return parsed.geturl()
+
+
+async def fetch_media_with_redirects(
+    client: httpx.AsyncClient,
+    url: str,
+    headers: dict[str, str],
+) -> httpx.Response:
+    current_url = validate_media_proxy_url(url)
+
+    for _ in range(MAX_REDIRECTS + 1):
+        req = client.build_request("GET", current_url, headers=headers)
+        resp = await client.send(req, stream=True)
+
+        if resp.status_code in {301, 302, 303, 307, 308}:
+            location = resp.headers.get("location")
+            await resp.aclose()
+            if not location:
+                raise HTTPException(status_code=502, detail="上游重定向缺少 Location")
+            current_url = validate_media_proxy_url(urljoin(current_url, location))
+            continue
+
+        return resp
+
+    raise HTTPException(status_code=502, detail=f"媒体重定向次数超过 {MAX_REDIRECTS} 次")
 
 
 @app.get(
@@ -151,12 +225,14 @@ def get_media_headers():
     """,
 )
 async def proxy_media(
+    request: Request,
     url: str = Query(..., description="抖音媒体文件直链（来自解析接口返回的 url 字段）"),
-    request: Request = None,
     download: str = Query("", description="设为 1 触发浏览器下载"),
 ):
     is_download = download.lower() in ("1", "true", "yes")
+    target_url = validate_media_proxy_url(url)
     req_headers = get_media_headers()
+    media_client = request.app.state.media_client
 
     if range_header := request.headers.get("range"):
         req_headers["Range"] = range_header
@@ -164,13 +240,10 @@ async def proxy_media(
     last_error = None
     for attempt in range(3):
         try:
-            client = httpx.AsyncClient(verify=False, timeout=60.0, follow_redirects=True)
-            req = client.build_request("GET", url, headers=req_headers)
-            resp = await client.send(req, stream=True)
+            resp = await fetch_media_with_redirects(media_client, target_url, req_headers)
 
             if resp.status_code >= 400:
                 await resp.aclose()
-                await client.aclose()
                 last_error = f"HTTP {resp.status_code}"
                 req_headers["User-Agent"] = random.choice(MOBILE_UAS)
                 continue
@@ -192,13 +265,12 @@ async def proxy_media(
                 filename = f"douyin_video_{int(time.time())}.mp4"
                 resp_headers["Content-Disposition"] = f'attachment; filename="{filename}"'
 
-            async def gen(resp_=resp, client_=client):
+            async def gen(resp_=resp):
                 try:
                     async for chunk in resp_.aiter_bytes():
                         yield chunk
                 finally:
                     await resp_.aclose()
-                    await client_.aclose()
 
             return StreamingResponse(
                 gen(),
@@ -207,8 +279,11 @@ async def proxy_media(
                 media_type=content_type,
             )
 
+        except HTTPException:
+            raise
         except Exception as e:
             last_error = str(e)
+            logger.warning("media proxy attempt %s failed", attempt + 1, exc_info=True)
             req_headers["User-Agent"] = random.choice(MOBILE_UAS)
             await asyncio.sleep(0.5)
             continue
@@ -308,9 +383,10 @@ async def _do_parse(url: str) -> ParseResponse:
     except ParseError as e:
         elapsed = round(time.time() - start, 3)
         return ParseResponse(success=False, error=e.message, elapsed=elapsed)
-    except Exception as e:
+    except Exception:
         elapsed = round(time.time() - start, 3)
-        return ParseResponse(success=False, error=f"服务异常: {str(e)}", elapsed=elapsed)
+        logger.exception("parse request failed")
+        return ParseResponse(success=False, error="服务异常，请稍后重试", elapsed=elapsed)
 
 
 # ── 健康检查 ─────────────────────────────────────────
@@ -341,7 +417,6 @@ async def index():
     return HTMLResponse("<h1>抖音解析工具</h1><p>页面文件缺失</p>")
 
 
-STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
