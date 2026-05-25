@@ -294,6 +294,7 @@ async def parse_douyin_url(raw_url: str) -> dict:
     last_error: Exception | None = None
     for candidate in candidate_urls:
         try:
+            video_data = await _parse_from_page(candidate)
             return _build_result(video_data, source_url=url, item_id=vid)
         except ParseError as e:
             last_error = e
