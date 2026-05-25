@@ -140,23 +140,13 @@ async def shutdown_event() -> None:
 
 def get_media_headers(url: str = "") -> dict[str, str]:
     """生成随机的请求头（降低被拦截概率），根据 URL 自动匹配 Referer）"""
-    # 根据 URL 域名推断平台
-    if "bilibili.com" in url or "bilivideo.com" in url or "hdslb.com" in url:
-        referer = "https://www.bilibili.com/"
-        origin = "https://www.bilibili.com"
-    elif "xiaohongshu.com" in url or "xhscdn.com" in url:
-        referer = "https://www.xiaohongshu.com/"
-        origin = "https://www.xiaohongshu.com"
-    else:
-        referer = "https://www.douyin.com/"
-        origin = "https://www.douyin.com"
-    
+    # 目前仅支持抖音
     return {
         "User-Agent": random.choice(MOBILE_UAS),
-        "Referer": referer,
+        "Referer": "https://www.douyin.com/",
         "Accept": "*/*",
         "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-        "Origin": origin,
+        "Origin": "https://www.douyin.com",
         "Sec-Fetch-Dest": "video",
         "Sec-Fetch-Mode": "no-cors",
         "Sec-Fetch-Site": "cross-site",
@@ -254,14 +244,8 @@ async def proxy_media(
                     resp_headers[h] = val
 
             if is_download:
-                # 根据 URL 推断平台名
-                if "bilibili.com" in target_url or "bilivideo.com" in target_url:
-                    platform_name = "bilibili"
-                elif "xiaohongshu.com" in target_url or "xhscdn.com" in target_url:
-                    platform_name = "xiaohongshu"
-                else:
-                    platform_name = "douyin"
-                filename = f"{platform_name}_video_{int(time.time())}.mp4"
+                # 目前仅支持抖音
+                filename = f"douyin_video_{int(time.time())}.mp4"
                 resp_headers["Content-Disposition"] = f'attachment; filename="{filename}"'
 
             async def gen(resp_=resp):
