@@ -239,10 +239,29 @@ async def test_proxy_media_拒绝非_http_scheme(client):
 
 
 @pytest.mark.asyncio
-async def test_proxy_media_拒绝非白名单域名(client):
-    resp = await client.get("/api/proxy/media", params={"url": "https://example.com/demo.mp4"})
+async def test_proxy_media_拒绝缺少主机名(client):
+    resp = await client.get("/api/proxy/media", params={"url": "https:///demo.mp4"})
     assert resp.status_code == 400
-    assert "抖音媒体地址" in resp.json()["detail"]
+    assert "主机名" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_proxy_media_允许任意_http_host(client, media_client):
+    media_client.responses = [
+        MockResponse(
+            status_code=200,
+            headers={"content-type": "video/mp4", "content-length": "2"},
+            body=b"ok",
+        )
+    ]
+
+    resp = await client.get(
+        "/api/proxy/media",
+        params={"url": "https://example.com/demo.mp4"},
+    )
+
+    assert resp.status_code == 200
+    assert media_client.requests[0]["url"] == "https://example.com/demo.mp4"
 
 
 @pytest.mark.asyncio
@@ -268,12 +287,17 @@ async def test_proxy_media_允许白名单域名并透传_range(client, media_cl
 
 
 @pytest.mark.asyncio
-async def test_proxy_media_拒绝重定向到非白名单域名(client, media_client):
+async def test_proxy_media_允许重定向到任意_http_host(client, media_client):
     media_client.responses = [
         MockResponse(
             status_code=302,
             headers={"location": "https://example.com/evil.mp4"},
-        )
+        ),
+        MockResponse(
+            status_code=200,
+            headers={"content-type": "video/mp4"},
+            body=b"ok",
+        ),
     ]
 
     resp = await client.get(
@@ -281,8 +305,8 @@ async def test_proxy_media_拒绝重定向到非白名单域名(client, media_cl
         params={"url": "https://aweme.snssdk.com/aweme/v1/play/?video_id=123"},
     )
 
-    assert resp.status_code == 400
-    assert "抖音媒体地址" in resp.json()["detail"]
+    assert resp.status_code == 200
+    assert media_client.requests[1]["url"] == "https://example.com/evil.mp4"
 
 
 @pytest.mark.asyncio

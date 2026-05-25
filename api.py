@@ -122,16 +122,6 @@ class ParseResponse(BaseModel):
 
 # ── 媒体代理 ─────────────────────────────────────────
 
-ALLOWED_MEDIA_HOSTS = {
-    "aweme.snssdk.com",
-}
-ALLOWED_MEDIA_HOST_SUFFIXES = (
-    ".douyinpic.com",
-    ".douyinvod.com",
-    ".byteimg.com",
-    ".byted-static.com",
-    ".bytegoofy.com",
-)
 MAX_REDIRECTS = 3
 PROXY_TIMEOUT = httpx.Timeout(60.0, connect=10.0)
 
@@ -162,22 +152,13 @@ def get_media_headers():
     }
 
 
-def _is_allowed_media_host(hostname: str) -> bool:
-    host = hostname.lower().rstrip(".")
-    return host in ALLOWED_MEDIA_HOSTS or host.endswith(ALLOWED_MEDIA_HOST_SUFFIXES)
-
-
 def validate_media_proxy_url(raw_url: str) -> str:
     parsed = urlsplit(raw_url)
     if parsed.scheme not in {"http", "https"}:
         raise HTTPException(status_code=400, detail="仅支持代理 http/https 媒体地址")
 
-    hostname = parsed.hostname
-    if not hostname:
+    if not parsed.hostname:
         raise HTTPException(status_code=400, detail="媒体地址缺少主机名")
-
-    if not _is_allowed_media_host(hostname):
-        raise HTTPException(status_code=400, detail="仅支持代理抖音媒体地址")
 
     return parsed.geturl()
 

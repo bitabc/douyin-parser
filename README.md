@@ -154,8 +154,6 @@ curl -o video.mp4 "http://localhost:8899/api/proxy/media?url=...&download=1"
 | `url` | string | **必填**。媒体文件直链（来自解析接口的 `video.url` 或 `contents[].url`） |
 | `download` | string | 可选。设为 `1` 触发浏览器下载 |
 
-> **说明**: 媒体代理仅接受抖音解析结果中预期出现的媒体地址，不支持代理任意第三方 URL。
-
 ### 3️⃣ 健康检查
 
 ```
