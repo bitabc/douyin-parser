@@ -26,7 +26,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from parsers import parse_douyin_url, ParseError, MOBILE_UAS
+from parsers import parse_any_url, ParseError, MOBILE_UAS, detect_platform
 
 logger = logging.getLogger(__name__)
 
@@ -138,14 +138,25 @@ async def shutdown_event() -> None:
         await client.aclose()
 
 
-def get_media_headers():
-    """生成随机的请求头（降低被拦截概率）"""
+def get_media_headers(url: str = "") -> dict[str, str]:
+    """生成随机的请求头（降低被拦截概率），根据 URL 自动匹配 Referer）"""
+    # 根据 URL 域名推断平台
+    if "bilibili.com" in url or "bilivideo.com" in url or "hdslb.com" in url:
+        referer = "https://www.bilibili.com/"
+        origin = "https://www.bilibili.com"
+    elif "xiaohongshu.com" in url or "xhscdn.com" in url:
+        referer = "https://www.xiaohongshu.com/"
+        origin = "https://www.xiaohongshu.com"
+    else:
+        referer = "https://www.douyin.com/"
+        origin = "https://www.douyin.com"
+    
     return {
         "User-Agent": random.choice(MOBILE_UAS),
-        "Referer": "https://www.douyin.com/",
+        "Referer": referer,
         "Accept": "*/*",
         "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-        "Origin": "https://www.douyin.com",
+        "Origin": origin,
         "Sec-Fetch-Dest": "video",
         "Sec-Fetch-Mode": "no-cors",
         "Sec-Fetch-Site": "cross-site",
@@ -212,7 +223,7 @@ async def proxy_media(
 ):
     is_download = download.lower() in ("1", "true", "yes")
     target_url = validate_media_proxy_url(url)
-    req_headers = get_media_headers()
+    req_headers = get_media_headers(target_url)
     media_client = request.app.state.media_client
 
     if range_header := request.headers.get("range"):
@@ -243,7 +254,14 @@ async def proxy_media(
                     resp_headers[h] = val
 
             if is_download:
-                filename = f"douyin_video_{int(time.time())}.mp4"
+                # 根据 URL 推断平台名
+                if "bilibili.com" in target_url or "bilivideo.com" in target_url:
+                    platform_name = "bilibili"
+                elif "xiaohongshu.com" in target_url or "xhscdn.com" in target_url:
+                    platform_name = "xiaohongshu"
+                else:
+                    platform_name = "douyin"
+                filename = f"{platform_name}_video_{int(time.time())}.mp4"
                 resp_headers["Content-Disposition"] = f'attachment; filename="{filename}"'
 
             async def gen(resp_=resp):
@@ -358,7 +376,7 @@ async def _do_parse(url: str) -> ParseResponse:
         raise HTTPException(status_code=400, detail="url 参数不能为空")
     start = time.time()
     try:
-        result = await parse_douyin_url(url)
+        result = await parse_any_url(url)
         elapsed = round(time.time() - start, 3)
         return ParseResponse(success=True, data=result, elapsed=elapsed)
     except ParseError as e:
@@ -379,7 +397,7 @@ async def _do_parse(url: str) -> ParseResponse:
     description="检查服务是否正常运行",
 )
 async def health():
-    return {"status": "ok", "service": "douyin-parser", "version": "2.0.0"}
+    return {"status": "ok", "service": "multi-parser", "version": "3.0.0"}
 
 
 # ── 前端页面 ────────────────────────────────────────
