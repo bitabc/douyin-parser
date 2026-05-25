@@ -1292,14 +1292,43 @@ function renderResult(d, elapsed) {
     // Download button
     document.getElementById('download-btn').href = vUrl + '&download=1';
 
-    // Copy link button
-    document.getElementById('copy-link-btn').onclick = function(e) {
-      navigator.clipboard.writeText(d.video.url).then(() => {
-        toast('直链已复制到剪贴板');
-        this.innerHTML = '✅ 已复制';
-        setTimeout(() => { this.innerHTML = '🔗 复制直链'; }, 2000);
-      }).catch(() => toast('复制失败', 'error'));
+    // Copy link button - 复制代理后的可播放直链
+    const copyBtn = document.getElementById('copy-link-btn');
+    copyBtn.onclick = function() {
+      const btn = this;
+      const copyUrl = window.location.origin + '/api/proxy/media?url=' + encodeURIComponent(d.video.url);
+      // 优先 Clipboard API (现代浏览器)，回退到旧方案
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(copyUrl).then(() => {
+          doneCopy(btn);
+        }).catch(() => fallbackCopy(copyUrl, btn));
+      } else {
+        fallbackCopy(copyUrl, btn);
+      }
     };
+
+    function fallbackCopy(text, btn) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, 99999);
+      try {
+        document.execCommand('copy') ? doneCopy(btn) : toast('复制失败，请手动复制', 'error');
+      } catch {
+        toast('复制失败，请手动复制', 'error');
+      }
+      document.body.removeChild(ta);
+    }
+
+    function doneCopy(btn) {
+      toast('直链已复制到剪贴板');
+      btn.innerHTML = '✅ 已复制';
+      setTimeout(() => { btn.innerHTML = '🔗 复制直链'; }, 2000);
+    }
 
     // PiP button
     document.getElementById('pip-btn').onclick = function() {
@@ -1390,9 +1419,29 @@ function renderResult(d, elapsed) {
 // ── Copy Curl ──
 function copyCurl() {
   const code = document.getElementById('curl-code').textContent;
-  navigator.clipboard.writeText(code).then(() => {
-    toast('cURL 命令已复制');
-  }).catch(() => toast('复制失败', 'error'));
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(code).then(() => {
+      toast('cURL 命令已复制');
+    }).catch(() => fallbackCopyCurl(code));
+  } else {
+    fallbackCopyCurl(code);
+  }
+}
+function fallbackCopyCurl(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  ta.style.top = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  ta.setSelectionRange(0, 99999);
+  try {
+    document.execCommand('copy') ? toast('cURL 命令已复制') : toast('复制失败', 'error');
+  } catch {
+    toast('复制失败', 'error');
+  }
+  document.body.removeChild(ta);
 }
 
 // ── Enter key ──
