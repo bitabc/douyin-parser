@@ -15,20 +15,41 @@
 
 ## 🚀 快速启动
 
-### 方式一：Docker（推荐）
+### 方式一：Docker Compose（推荐）
 
 ```bash
-# 启动服务
+# 克隆仓库
+git clone https://github.com/bitabc/douyin-parser.git
+cd douyin-parser
+
+# 启动服务（后台运行）
 docker compose up -d
 
 # 查看日志
 docker compose logs -f
 
-# 停止
+# 停止服务
 docker compose down
+
+# 停止并删除数据卷
+docker compose down -v
 ```
 
-### 方式二：直接运行
+访问 **http://localhost:8899** 打开工具页面。
+
+### 方式二：使用预构建镜像
+
+从 GitHub Container Registry 拉取，无需本地构建：
+
+```bash
+docker run -d \
+  --name douyin-parser \
+  -p 8899:8899 \
+  --restart unless-stopped \
+  ghcr.io/bitabc/douyin-parser:latest
+```
+
+### 方式三：直接运行（开发用）
 
 ```bash
 # 安装依赖
@@ -37,10 +58,10 @@ pip install -r requirements.txt
 # 启动
 python api.py
 # 或
-uvicorn api:app --host 0.0.0.0 --port 8899
+uvicorn api:app --host 0.0.0.0 --port 8899 --reload
 ```
 
-访问 **http://localhost:8899** 打开工具页面。
+> `--reload` 仅开发模式使用，文件修改后自动重载。
 
 ## 📖 API 文档
 
@@ -159,18 +180,315 @@ curl -o douyin_video.mp4 \
   "http://localhost:8899/api/proxy/media?url=https%3A%2F%2Faweme.snssdk.com%2Faweme%2Fv1%2Fplay%2F%3Fvideo_id%3D...&download=1"
 ```
 
+## 🐳 Docker 部署指南
+
+### 快速部署
+
+#### 使用 Docker Compose（单机最快）
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/bitabc/douyin-parser.git
+cd douyin-parser
+
+# 2. 启动服务（前台查看日志）
+docker compose up
+
+# 3. 确认无报错后，切后台运行
+#    Ctrl+C 停止，然后：
+docker compose up -d
+
+# 4. 验证服务状态
+curl http://localhost:8899/health
+```
+
+#### 使用 Docker Run（跳过克隆）
+
+```bash
+docker run -d \
+  --name douyin-parser \
+  -p 8899:8899 \
+  --restart unless-stopped \
+  ghcr.io/bitabc/douyin-parser:latest
+```
+
+### 配置详解
+
+#### 环境变量
+
+可通过 `environment` 或 `.env` 文件自定义：
+
+| 变量名 | 默认值 | 说明 |
+|--------|--------|------|
+| `TZ` | `Asia/Shanghai` | 容器时区 |
+| `WORKERS` | `1` | Uvicorn worker 数量（多核服务器可调高） |
+| `LOG_LEVEL` | `info` | 日志级别：`debug`, `info`, `warning`, `error` |
+
+**使用方式：**
+
+```yaml
+# docker-compose.yml 中添加
+services:
+  douyin-parser:
+    # ...
+    environment:
+      - TZ=Asia/Shanghai
+      - WORKERS=2
+      - LOG_LEVEL=info
+```
+
+或创建 `.env` 文件：
+
+```bash
+# .env
+TZ=Asia/Shanghai
+WORKERS=2
+LOG_LEVEL=info
+```
+
+#### 端口映射
+
+默认映射 `8899:8899`，如需改端口：
+
+```bash
+# 映射到宿主机 8080 端口
+docker run -d -p 8080:8899 ghcr.io/bitabc/douyin-parser:latest
+```
+
+```yaml
+# docker-compose.yml
+ports:
+  - "8080:8899"
+```
+
+#### 数据卷
+
+媒体代理会缓存临时数据，建议持久化：
+
+```yaml
+volumes:
+  - douyin_cache:/tmp/douyin_cache
+```
+
+### 生产部署
+
+#### Docker Compose（生产推荐）
+
+```yaml
+version: "3.8"
+
+services:
+  douyin-parser:
+    image: ghcr.io/bitabc/douyin-parser:latest
+    container_name: douyin-parser
+    ports:
+      - "8899:8899"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8899/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 2
+      start_period: 10s
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - douyin_cache:/tmp/douyin_cache
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1"
+
+volumes:
+  douyin_cache:
+```
+
+保存为 `docker-compose.prod.yml`，然后：
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+#### 使用预构建镜像（无需本地构建）
+
+每次推送到 `main` 分支，GitHub Actions 会自动构建并推送镜像到 `ghcr.io`。
+
+```bash
+# 拉取最新镜像
+docker pull ghcr.io/bitabc/douyin-parser:latest
+
+# 启动
+docker run -d \
+  --name douyin-parser \
+  -p 8899:8899 \
+  --restart unless-stopped \
+  ghcr.io/bitabc/douyin-parser:latest
+```
+
+#### 指定版本
+
+镜像标签规则：
+
+| 标签 | 示例 | 说明 |
+|------|------|------|
+| `latest` | `ghcr.io/bitabc/douyin-parser:latest` | 最新稳定版本 |
+| `sha-xxxxx` | `ghcr.io/bitabc/douyin-parser:main-abc1234` | 具体 commit SHA（短格式） |
+| `YYYYMMDD` | `ghcr.io/bitabc/douyin-parser:20250321` | 构建日期 |
+
+```bash
+# 使用特定版本
+docker pull ghcr.io/bitabc/douyin-parser:20250321
+```
+
+#### 灰度发布 / 回滚
+
+```bash
+# 回滚到指定版本
+docker run -d \
+  --name douyin-parser \
+  -p 8899:8899 \
+  ghcr.io/bitabc/douyin-parser:main-abc1234
+```
+
+### 反向代理
+
+#### Nginx
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    client_max_body_size 10m;
+    proxy_read_timeout 300s;
+
+    location / {
+        proxy_pass http://127.0.0.1:8899;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;             # 视频流式传输必须关闭
+        proxy_request_buffering off;     # 同上
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+```
+
+> **注意**: 代理视频流时务必关闭 `proxy_buffering` 和 `proxy_request_buffering`，否则视频播放会卡顿。
+
+#### Caddy（自动 HTTPS）
+
+```caddyfile
+your-domain.com {
+    reverse_proxy localhost:8899 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+    }
+}
+```
+
+#### 宝塔面板
+
+在宝塔面板中：
+1. 网站 → 添加站点 → 填入域名
+2. 设置 → 反向代理 → 添加
+   - 代理名称：`douyin-parser`
+   - 目标 URL：`http://127.0.0.1:8899`
+3. 配置文件 → 加入以下关键配置：
+
+```nginx
+proxy_buffering off;
+proxy_request_buffering off;
+proxy_http_version 1.1;
+proxy_set_header Upgrade $http_upgrade;
+proxy_set_header Connection "upgrade";
+```
+
+### Docker Compose 参考
+
+#### 基础命令
+
+```bash
+# 构建并启动
+docker compose up -d
+
+# 仅构建（不启动）
+docker compose build
+
+# 查看日志（持续跟踪）
+docker compose logs -f
+
+# 查看日志（最近 100 行）
+docker compose logs --tail=100
+
+# 重启
+docker compose restart
+
+# 停止
+docker compose stop
+
+# 停止并删除容器
+docker compose down
+
+# 停止、删容器、删数据卷
+docker compose down -v
+
+# 重新构建镜像并启动
+docker compose up -d --build
+```
+
+#### 常见问题
+
+| 问题 | 原因 | 解决 |
+|------|------|------|
+| 端口被占用 | `8899` 已被其他进程占用 | 修改 `docker-compose.yml` 中左侧端口映射，或 `lsof -i :8899` 查看占用进程 |
+| 视频无法播放 | 反向代理未关闭 `proxy_buffering` | 参考上方 Nginx 配置，加上 `proxy_buffering off` |
+| 容器反复重启 | 健康检查失败 | `docker logs douyin-parser` 查看错误日志 |
+| 解析无响应 | 抖音 CDN 检测到异常请求 | 服务会自动重试 3 次并轮换 UA，一般等待几秒即可 |
+
+### CI/CD 自动构建
+
+推送到 `main` 分支后，GitHub Actions 自动：
+
+1. 检出代码
+2. 设置 Docker Buildx
+3. 登录 ghcr.io（使用 `GITHUB_TOKEN`）
+4. 构建多标签镜像（`latest`, `sha-xxxxx`, `YYYYMMDD`）
+5. 推送到 `ghcr.io/bitabc/douyin-parser`
+6. 利用 GitHub Actions Cache 加速后续构建
+
+> 首次使用需要到 GitHub 仓库 Settings → Actions → General 中，确保 **Workflow permissions** 设为 **Read and write permissions**。
+
+#### 手动触发构建
+
+到 GitHub 仓库的 Actions 页面，选择 **🐳 Docker Build & Push** 工作流，点击 **Run workflow** 即可。
+
 ## 🏗 项目结构
 
 ```
 douyin-parser/
-├── api.py              # FastAPI 服务 + 媒体代理
-├── parsers.py          # 核心解析引擎（_ROUTER_DATA 提取）
+├── api.py                 # FastAPI 服务 + 媒体代理
+├── parsers.py             # 核心解析引擎（_ROUTER_DATA 提取）
 ├── static/
-│   └── index.html      # 前端工具页面
-├── Dockerfile          # Docker 构建文件
-├── docker-compose.yml  # Docker Compose 配置
-├── requirements.txt    # Python 依赖
-└── .gitignore          # Git 忽略规则
+│   └── index.html         # 前端工具页面
+├── tests/
+│   └── test_api.py        # 单元测试（22 个）
+├── Dockerfile             # 多阶段 Docker 构建
+├── docker-compose.yml     # Docker Compose 配置（开发）
+├── docker-compose.prod.yml# Docker Compose 配置（生产参考）
+├── requirements.txt       # Python 依赖
+├── pyproject.toml         # 项目元数据
+└── .github/workflows/
+    └── docker-build.yml   # GitHub Actions CI/CD
 ```
 
 ## 🔧 技术原理
@@ -198,30 +516,6 @@ playwm → play 去除水印
 - `msgspec` 比标准 `json` + `dataclass` 快 10-100 倍
 - 视频地址 `playwm` → `play` 字符串替换即可去水印
 
-## 📦 部署
+## 📄 License
 
-### Docker
-
-```bash
-docker compose up -d
-```
-
-### 反向代理（Nginx）
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:8899;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_buffering off;  # 流式传输必须
-        proxy_request_buffering off;
-        proxy_http_version 1.1;
-    }
-}
-```
-
-> **注意**: 代理视频流时务必关闭 `proxy_buffering`，否则视频播放会卡顿。
+MIT
