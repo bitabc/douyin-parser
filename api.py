@@ -170,6 +170,9 @@ def validate_media_proxy_url(raw_url: str) -> str:
         "douyin.com", "douyinpic.com", "snssdk.com", "bytedance.com",
         "byteimg.com", "pstatp.com", "toutiao.com", "ixigua.com",
         "amemv.com", "iesdouyin.com",
+        # 抖音 CDN 服务商
+        "zjcdn.com", "bdstatic.com", "douyinvod.com", "douyincdn.com",
+        "bytecdn.cn", "bytedns.net", "bytednsdoc.com",
     }
     
     hostname = parsed.hostname.lower()
