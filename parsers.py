@@ -10,7 +10,6 @@ import json
 from typing import Any
 
 import httpx
-from msgspec import Struct, field
 
 
 # ── 异常 ──────────────────────────────────────────────
@@ -21,26 +20,6 @@ class ParseError(Exception):
         self.message = message
         self.detail = detail
         super().__init__(f"{message} {detail}".strip())
-
-
-# ── 数据模型 ──────────────────────────────────────────
-
-class Author(Struct):
-    name: str
-    avatar_url: str | None = None
-
-
-class VideoResult(Struct):
-    platform: str
-    type: str  # "视频" | "图文" | "图集"
-    id: str
-    title: str
-    author: Author
-    create_time: int | None = None
-    cover_url: str | None = None
-    video_url: str | None = None
-    contents: list[dict] = field(default_factory=list)
-    source_url: str | None = None
 
 
 # ── User-Agent 池 ─────────────────────────────────────
@@ -58,6 +37,13 @@ MOBILE_UAS = [
 ]
 
 COMMON_TIMEOUT = httpx.Timeout(15.0, connect=10.0)
+
+
+# ── 工具函数 ──────────────────────────────────────────
+
+def _safe_choice(lst: list) -> Any | None:
+    """安全地从列表中随机选取，空列表返回 None"""
+    return random.choice(lst) if lst else None
 
 
 # ── URL 提取 ──────────────────────────────────────────
@@ -221,23 +207,10 @@ async def _parse_douyin_page(url: str, source_url: str, item_id: str) -> dict:
     
     text = resp.text
     
-    # 正则提取 window._ROUTER_DATA
-    pattern = re.compile(
-        r"window\._ROUTER_DATA\s*=\s*(.*?)</script>",
-        flags=re.DOTALL,
-    )
-    matched = pattern.search(text)
-    if not matched:
+    # 复用 extract_json_from_html 提取 window._ROUTER_DATA
+    router_data = extract_json_from_html(text, "_ROUTER_DATA")
+    if not router_data:
         raise ParseError("页面中未找到 _ROUTER_DATA，可能页面结构已更新", url)
-    
-    raw = matched.group(1).strip()
-    # 处理 JS undefined
-    raw = re.sub(r":\s*undefined(?=[,\s\}\]])", ": null", raw)
-    
-    try:
-        router_data = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ParseError("_ROUTER_DATA JSON 解析失败", str(e))
     
     # 提取视频数据
     loader_data = router_data.get("loaderData", {})
@@ -257,14 +230,15 @@ async def _parse_douyin_page(url: str, source_url: str, item_id: str) -> dict:
     # 构建结果
     author = item.get("author", {})
     avatar = author.get("avatar_thumb") or author.get("avatar_medium")
-    avatar_url = random.choice(avatar.get("url_list", [])) if avatar else None
+    avatar_url = _safe_choice(avatar.get("url_list", [])) if avatar else None
     
     video_data = item.get("video", {})
     play_addr = video_data.get("play_addr", {})
-    video_url = random.choice(play_addr.get("url_list", [])).replace("playwm", "play") if play_addr else None
+    video_url_raw = _safe_choice(play_addr.get("url_list", []))
+    video_url = video_url_raw.replace("playwm", "play") if video_url_raw else None
     
     cover_data = video_data.get("cover", {})
-    cover_url = random.choice(cover_data.get("url_list", [])) if cover_data else None
+    cover_url = _safe_choice(cover_data.get("url_list", [])) if cover_data else None
     
     duration = video_data.get("duration", 0) // 1000 if video_data else None
     
@@ -276,7 +250,9 @@ async def _parse_douyin_page(url: str, source_url: str, item_id: str) -> dict:
         for img in image_list:
             urls = img.get("url_list", [])
             if urls:
-                contents.append({"type": "image", "url": random.choice(urls)})
+                img_url = _safe_choice(urls)
+                if img_url:
+                    contents.append({"type": "image", "url": img_url})
     
     if video_url:
         if not contents:  # 纯视频（无图集）
@@ -322,7 +298,8 @@ async def _parse_douyin_slides(vid: str) -> dict:
         timeout=COMMON_TIMEOUT,
     ) as client:
         resp = await client.get(api_url, params=params)
-        resp.raise_for_status()
+        if resp.status_code != 200:
+            raise ParseError(f"slides API 请求失败 (HTTP {resp.status_code})")
     
     slides_info = resp.json()
     aweme_details = slides_info.get("aweme_details", [])
@@ -340,15 +317,24 @@ async def _parse_douyin_slides(vid: str) -> dict:
             play_addr = video_data.get("play_addr", {})
             urls = play_addr.get("url_list", [])
             if urls:
-                contents.append({
-                    "type": "video",
-                    "url": random.choice(urls).replace("playwm", "play"),
-                    "is_gif": True,
-                })
+                raw_url = _safe_choice(urls)
+                if raw_url:
+                    contents.append({
+                        "type": "video",
+                        "url": raw_url.replace("playwm", "play"),
+                        "is_gif": True,
+                    })
         else:
             urls = img.get("url_list", [])
             if urls:
-                contents.append({"type": "image", "url": random.choice(urls)})
+                img_url = _safe_choice(urls)
+                if img_url:
+                    contents.append({"type": "image", "url": img_url})
+    
+    # 作者头像
+    author_data = sd.get("author", {})
+    avatar_thumb = author_data.get("avatar_thumb", {})
+    avatar_url = _safe_choice(avatar_thumb.get("url_list", []))
     
     return {
         "platform": "抖音",
@@ -357,7 +343,7 @@ async def _parse_douyin_slides(vid: str) -> dict:
         "title": sd.get("desc", "(无标题)"),
         "author": {
             "name": sd.get("author", {}).get("nickname", ""),
-            "avatar_url": random.choice(sd.get("author", {}).get("avatar_thumb", {}).get("url_list", [])),
+            "avatar_url": avatar_url,
         },
         "create_time": sd.get("create_time"),
         "contents": contents,
@@ -372,8 +358,15 @@ _PLATFORM_PARSERS = {
 
 
 def detect_platform(url: str) -> str | None:
-    """自动检测链接所属平台"""
-    if "douyin.com" in url or "iesdouyin.com" in url or "v.douyin.com" in url:
+    """自动检测链接所属平台（精确域名匹配）"""
+    from urllib.parse import urlsplit
+    try:
+        hostname = urlsplit(url).hostname or ""
+    except Exception:
+        return None
+    
+    douyin_domains = {"douyin.com", "iesdouyin.com", "v.douyin.com", "jingxuan.douyin.com"}
+    if hostname in douyin_domains or any(hostname.endswith("." + d) for d in douyin_domains):
         return "douyin"
     return None
 

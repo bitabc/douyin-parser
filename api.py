@@ -157,12 +157,33 @@ def get_media_headers(url: str = "") -> dict[str, str]:
 
 
 def validate_media_proxy_url(raw_url: str) -> str:
+    """验证媒体代理 URL（防止 SSRF 攻击）"""
     parsed = urlsplit(raw_url)
     if parsed.scheme not in {"http", "https"}:
         raise HTTPException(status_code=400, detail="仅支持代理 http/https 媒体地址")
 
     if not parsed.hostname:
         raise HTTPException(status_code=400, detail="媒体地址缺少主机名")
+
+    # 白名单：仅允许抖音相关域名
+    allowed_domains = {
+        "douyin.com", "douyinpic.com", "snssdk.com", "bytedance.com",
+        "byteimg.com", "pstatp.com", "toutiao.com", "ixigua.com",
+        "amemv.com", "iesdouyin.com",
+    }
+    
+    hostname = parsed.hostname.lower()
+    # 检查是否为允许的域名或其子域名
+    is_allowed = any(
+        hostname == domain or hostname.endswith("." + domain)
+        for domain in allowed_domains
+    )
+    
+    if not is_allowed:
+        raise HTTPException(
+            status_code=403,
+            detail=f"不允许代理此域名: {hostname}（仅支持抖音相关域名）"
+        )
 
     return parsed.geturl()
 

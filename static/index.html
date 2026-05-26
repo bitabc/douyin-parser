@@ -1049,7 +1049,11 @@ function toast(msg, type = 'success') {
   const container = document.getElementById('toast-container');
   const el = document.createElement('div');
   el.className = 'toast toast-' + type;
-  el.innerHTML = '<span class="toast-icon">' + (type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ') + '</span>' + msg;
+  const iconSpan = document.createElement('span');
+  iconSpan.className = 'toast-icon';
+  iconSpan.textContent = type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ';
+  el.appendChild(iconSpan);
+  el.appendChild(document.createTextNode(msg));
   container.appendChild(el);
   setTimeout(() => {
     el.classList.add('out');
@@ -1079,15 +1083,29 @@ function renderHistory() {
   const list = document.getElementById('history-list');
   if (h.length === 0) { bar.classList.remove('active'); return; }
   bar.classList.add('active');
-  list.innerHTML = h.map(item => `\
-    <div class="history-item" onclick='fillUrl("${item.url || ''}")'>\
-      <img src="${proxyUrl(item.avatar)}" alt="" onerror="this.style.display='none'" />\
-      <div class="history-item-text">\
-        <div class="history-item-name">${escapeHtml(item.name)}</div>\
-        <div class="history-item-meta">${item.type || '视频'}</div>\
-      </div>\
-    </div>\
-  `).join('');
+  list.innerHTML = '';
+  h.forEach(function(item) {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.addEventListener('click', function() { fillUrl(item.url || ''); });
+    const img = document.createElement('img');
+    img.src = proxyUrl(item.avatar);
+    img.alt = '';
+    img.onerror = function() { this.style.display = 'none'; };
+    div.appendChild(img);
+    const textDiv = document.createElement('div');
+    textDiv.className = 'history-item-text';
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'history-item-name';
+    nameDiv.textContent = item.name;
+    textDiv.appendChild(nameDiv);
+    const metaDiv = document.createElement('div');
+    metaDiv.className = 'history-item-meta';
+    metaDiv.textContent = item.type || '视频';
+    textDiv.appendChild(metaDiv);
+    div.appendChild(textDiv);
+    list.appendChild(div);
+  });
 }
 function escapeHtml(s) {
   if (!s) return '';

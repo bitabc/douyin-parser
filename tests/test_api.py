@@ -343,6 +343,16 @@ class TestMediaProxy:
         assert "主机名" in resp.json()["detail"]
 
     @pytest.mark.asyncio
+    async def test_proxy_拒绝非白名单域名(self, client):
+        """SSRF 防护：拒绝非抖音域名"""
+        resp = await client.get(
+            "/api/proxy/media",
+            params={"url": "https://example.com/demo.mp4"},
+        )
+        assert resp.status_code == 403
+        assert "不允许代理此域名" in resp.json()["detail"]
+
+    @pytest.mark.asyncio
     async def test_proxy_透传_range(self, client, media_client):
         media_client.responses = [
             MockResponse(
@@ -368,7 +378,7 @@ class TestMediaProxy:
         media_client.responses = [
             MockResponse(
                 status_code=302,
-                headers={"location": "https://example.com/redirect.mp4"},
+                headers={"location": "https://p1.douyinpic.com/redirect.mp4"},
             ),
             MockResponse(
                 status_code=200,
@@ -384,7 +394,7 @@ class TestMediaProxy:
 
         assert resp.status_code == 200
         assert len(media_client.requests) == 2
-        assert media_client.requests[1]["url"] == "https://example.com/redirect.mp4"
+        assert media_client.requests[1]["url"] == "https://p1.douyinpic.com/redirect.mp4"
 
     @pytest.mark.asyncio
     async def test_proxy_下载模式(self, client, media_client):
