@@ -343,14 +343,22 @@ class TestMediaProxy:
         assert "主机名" in resp.json()["detail"]
 
     @pytest.mark.asyncio
-    async def test_proxy_拒绝非白名单域名(self, client):
-        """SSRF 防护：拒绝非抖音域名"""
+    async def test_proxy_允许任意域名(self, client, media_client):
+        """不再限制域名，任意 http/https 域名均可代理"""
+        media_client.responses = [
+            MockResponse(
+                status_code=200,
+                headers={"content-type": "video/mp4", "content-length": "4"},
+                body=b"test",
+            )
+        ]
+
         resp = await client.get(
             "/api/proxy/media",
             params={"url": "https://example.com/demo.mp4"},
         )
-        assert resp.status_code == 403
-        assert "不允许代理此域名" in resp.json()["detail"]
+        assert resp.status_code == 200
+        assert resp.content == b"test"
 
     @pytest.mark.asyncio
     async def test_proxy_透传_range(self, client, media_client):
