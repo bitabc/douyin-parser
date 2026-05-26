@@ -24,49 +24,18 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from pydantic import BaseModel, Field
 
 from parsers import parse_any_url, ParseError, MOBILE_UAS, detect_platform
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(
-    title="抖音解析服务",
-    description="""
-    解析抖音分享链接，提取无水印视频 / 图文 / 图集。
-
-    ## ✨ 功能特性
-    - 支持短链接、标准链接、整段分享文本
-    - 自动追踪 302 重定向
-    - 提取无水印视频直链
-    - 支持图集（slides）/ 图文（note）/ 视频
-    - 媒体代理转发（解决 Referer/CORS 拦截）
-    - 视频流式播放 + 进度条拖动
-    - 一键下载 MP4
-
-    ## 🚀 快速开始
-    ```bash
-    curl "http://localhost:8899/api/parse?url=https://v.douyin.com/xxxxx/"
-    ```
-    """,
-    version="2.0.0",
-    contact={
-        "name": "抖音解析工具",
-        "url": "https://github.com/bitabc/douyin-parser",
-    },
-    docs_url="/docs",
-    redoc_url="/redoc",
-)
-
-# CORS 中间件
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# ── 常量 ───────────────────────────────────────────────
 
 STATIC_DIR = Path(__file__).parent / "static"
+MAX_REDIRECTS = 3
+PROXY_TIMEOUT = httpx.Timeout(60.0, connect=10.0)
 
 
 # ── 数据模型 ─────────────────────────────────────────
@@ -120,23 +89,57 @@ class ParseResponse(BaseModel):
     elapsed: float | None = Field(None, description="耗时（秒）")
 
 
-# ── 媒体代理 ─────────────────────────────────────────
+# ── 生命周期管理 ───────────────────────────────────────
 
-MAX_REDIRECTS = 3
-PROXY_TIMEOUT = httpx.Timeout(60.0, connect=10.0)
-
-
-@app.on_event("startup")
-async def startup_event() -> None:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用启动/关闭事件（替代已弃用的 on_event）"""
     app.state.media_client = httpx.AsyncClient(timeout=PROXY_TIMEOUT, follow_redirects=False)
-
-
-@app.on_event("shutdown")
-async def shutdown_event() -> None:
+    yield
     client = getattr(app.state, "media_client", None)
     if client is not None:
         await client.aclose()
 
+
+app = FastAPI(
+    title="抖音解析服务",
+    description="""
+    解析抖音分享链接，提取无水印视频 / 图文 / 图集。
+
+    ## ✨ 功能特性
+    - 支持短链接、标准链接、整段分享文本
+    - 自动追踪 302 重定向
+    - 提取无水印视频直链
+    - 支持图集（slides）/ 图文（note）/ 视频
+    - 媒体代理转发（解决 Referer/CORS 拦截）
+    - 视频流式播放 + 进度条拖动
+    - 一键下载 MP4
+
+    ## 🚀 快速开始
+    ```bash
+    curl "http://localhost:8899/api/parse?url=https://v.douyin.com/xxxxx/"
+    ```
+    """,
+    version="2.1.0",
+    contact={
+        "name": "抖音解析工具",
+        "url": "https://github.com/bitabc/douyin-parser",
+    },
+    docs_url="/docs",
+    redoc_url="/redoc",
+    lifespan=lifespan,
+)
+
+# CORS 中间件
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ── 媒体代理 ─────────────────────────────────────────
 
 def get_media_headers(url: str = "") -> dict[str, str]:
     """生成随机的请求头（降低被拦截概率），根据 URL 自动匹配 Referer）"""
@@ -381,7 +384,7 @@ async def _do_parse(url: str) -> ParseResponse:
     description="检查服务是否正常运行",
 )
 async def health():
-    return {"status": "ok", "service": "multi-parser", "version": "3.0.0"}
+    return {"status": "ok", "service": "douyin-parser", "version": "2.1.0"}
 
 
 # ── 前端页面 ────────────────────────────────────────

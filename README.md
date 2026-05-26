@@ -161,7 +161,7 @@ GET /health
 ```
 
 ```json
-{"status": "ok", "service": "douyin-parser", "version": "2.0.0"}
+{"status": "ok", "service": "douyin-parser", "version": "2.1.0"}
 ```
 
 ## 🧪 本地测试
