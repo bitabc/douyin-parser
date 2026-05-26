@@ -1061,10 +1061,10 @@ function toast(msg, type = 'success') {
 function getHistory() {
   try { return JSON.parse(localStorage.getItem('dy_history') || '[]'); } catch { return []; }
 }
-function addHistory(name, avatar, type) {
+function addHistory(name, avatar, type, url) {
   let h = getHistory();
-  h = h.filter(x => x.name !== name);
-  h.unshift({ name, avatar, type, time: Date.now() });
+  h = h.filter(x => x.url !== url);
+  h.unshift({ name, avatar, type, url, time: Date.now() });
   if (h.length > 12) h = h.slice(0, 12);
   localStorage.setItem('dy_history', JSON.stringify(h));
   renderHistory();
@@ -1079,14 +1079,14 @@ function renderHistory() {
   const list = document.getElementById('history-list');
   if (h.length === 0) { bar.classList.remove('active'); return; }
   bar.classList.add('active');
-  list.innerHTML = h.map(item => `
-    <div class="history-item" onclick="fillUrl('${escapeHtml(lastParseUrl || '')}')">
-      <img src="${item.avatar || ''}" alt="" onerror="this.style.display='none'" />
-      <div class="history-item-text">
-        <div class="history-item-name">${escapeHtml(item.name)}</div>
-        <div class="history-item-meta">${item.type || '视频'}</div>
-      </div>
-    </div>
+  list.innerHTML = h.map(item => `\
+    <div class="history-item" onclick='fillUrl("${item.url || ''}")'>\
+      <img src="${proxyUrl(item.avatar)}" alt="" onerror="this.style.display='none'" />\
+      <div class="history-item-text">\
+        <div class="history-item-name">${escapeHtml(item.name)}</div>\
+        <div class="history-item-meta">${item.type || '视频'}</div>\
+      </div>\
+    </div>\
   `).join('');
 }
 function escapeHtml(s) {
@@ -1413,7 +1413,7 @@ function renderResult(d, elapsed) {
   }, 100);
 
   // ── History ──
-  addHistory(authorName, d.author?.avatar_url ? proxyUrl(d.author.avatar_url) : '', d.type);
+  addHistory(authorName, d.author?.avatar_url || '', d.type, lastParseUrl);
 }
 
 // ── Copy Curl ──
